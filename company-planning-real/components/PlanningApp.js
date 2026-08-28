@@ -23,8 +23,21 @@ export default function PlanningApp(){
 function AuthScreen(){
  const [mode,setMode]=useState('login'),[fullName,setFullName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  async function submit(e){e.preventDefault();setBusy(true);setMessage('');
-  if(mode==='signup'){const {error}=await supabase.auth.signUp({email,password,options:{data:{full_name:fullName}}});setMessage(error?error.message:'Hesap oluşturuldu. E-posta doğrulaması açıksa gelen kutunu kontrol et.')}
-  else{const {error}=await supabase.auth.signInWithPassword({email,password});if(error)setMessage(error.message)}
+  if(mode==='signup'){
+  const {error}=await supabase.auth.signUp({
+    email,
+    password,
+    options:{
+      data:{full_name:fullName},
+      emailRedirectTo:`${window.location.origin}/`
+    }
+  });
+  setMessage(error ? error.message : 'Hesap oluşturuldu. E-posta doğrulaması açıksa gelen kutunu kontrol et.');
+}
+else{
+  const {error}=await supabase.auth.signInWithPassword({email,password});
+  if(error)setMessage(error.message);
+}
   setBusy(false);
  }
  return <main className="auth-page"><div className="auth-card"><div className="logo">COMPANY <span>PLANNING</span></div><p className="eyebrow">{mode==='login'?'GİRİŞ':'YENİ HESAP'}</p><h1>{mode==='login'?'Hoş geldin.':'Hesap oluştur.'}</h1><p className="muted">{mode==='login'?'Planning sistemine giriş yap.':'Çalışan hesabını oluştur.'}</p>
