@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company Planning</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">COMPANY <span>PLANNING</span></div>
+    <nav>
+      <button class="nav-btn active" data-view="employee">Çalışan</button>
+      <button class="nav-btn" data-view="admin">Yönetici</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="employeeView" class="view active">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">ÇALIŞAN PANELİ</p>
+          <h1>Çalışma planını gönder.</h1>
+          <p class="muted">İsim, tarih, saat ve çalışma yerini gir. Bilgi anında planning ekranına eklenir.</p>
+        </div>
+      </div>
+
+      <div class="card form-card">
+        <form id="shiftForm">
+          <label>İsim Soyisim
+            <input id="name" type="text" placeholder="Örn. Ahmet Yılmaz" required>
+          </label>
+
+          <label>Tarih
+            <input id="date" type="date" required>
+          </label>
+
+          <div class="two-col">
+            <label>Başlangıç
+              <input id="start" type="time" required>
+            </label>
+            <label>Bitiş
+              <input id="end" type="time" required>
+            </label>
+          </div>
+
+          <label>Yer
+            <select id="location" required>
+              <option value="">Yer seçin</option>
+              <option>Düsseldorf</option>
+              <option>Köln</option>
+              <option>Amsterdam</option>
+              <option>Enschede</option>
+              <option>Diğer</option>
+            </select>
+          </label>
+
+          <label id="customLocationWrap" class="hidden">Diğer yer
+            <input id="customLocation" type="text" placeholder="Çalışma yerini yazın">
+          </label>
+
+          <button class="primary" type="submit">PLAN GÖNDER →</button>
+          <div id="success" class="success hidden">✓ Plan başarıyla gönderildi.</div>
+        </form>
+      </div>
+    </section>
+
+    <section id="adminView" class="view">
+      <div class="admin-head">
+        <div>
+          <p class="eyebrow">YÖNETİCİ PANELİ</p>
+          <h1>Haftalık Planning</h1>
+          <p class="muted">Gönderilen tüm çalışma planlarını buradan yönet.</p>
+        </div>
+        <div class="actions">
+          <button id="clearBtn" class="secondary">Tümünü temizle</button>
+          <button id="exportBtn" class="primary small">CSV İNDİR</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><span>Toplam plan</span><strong id="totalCount">0</strong></div>
+        <div class="stat"><span>Çalışan</span><strong id="employeeCount">0</strong></div>
+        <div class="stat"><span>Toplam saat</span><strong id="hoursCount">0</strong></div>
+      </div>
+
+      <div class="toolbar card">
+        <input id="search" type="search" placeholder="Çalışan ara...">
+        <input id="filterDate" type="date">
+        <select id="filterLocation">
+          <option value="">Tüm yerler</option>
+          <option>Düsseldorf</option><option>Köln</option><option>Amsterdam</option><option>Enschede</option>
+        </select>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Çalışan</th><th>Tarih</th><th>Saat</th><th>Yer</th><th></th></tr></thead>
+            <tbody id="planningBody"></tbody>
+          </table>
+        </div>
+        <div id="empty" class="empty">Henüz gönderilmiş bir plan yok.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
