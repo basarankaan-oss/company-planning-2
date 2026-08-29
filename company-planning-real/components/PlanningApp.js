@@ -25,6 +25,12 @@ const duration = (a, b) => {
   return m / 60;
 };
 
+const normalizeText = (value) =>
+  String(value || '')
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
 const formatDate = (date) => {
   return new Date(`${date}T12:00:00`).toLocaleDateString('tr-TR', {
     day: '2-digit',
@@ -82,7 +88,7 @@ export default function PlanningApp() {
     async function loadProfile(id) {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id,full_name,role')
+        .select('id,full_name,role,employee_number')
         .eq('id', id)
         .single();
 
@@ -270,7 +276,7 @@ function AuthScreen() {
   );
 }
 
-function Header({ name, role, onLogout }) {
+function Header({ name, employeeNumber, role, onLogout }) {
   return (
     <header className="topbar">
       <div className="logo">
@@ -279,7 +285,10 @@ function Header({ name, role, onLogout }) {
 
       <div className="user">
         <span>
-          <strong>{name}</strong>
+          <strong>
+            {name}
+            {employeeNumber ? ` · ${employeeNumber}` : ''}
+          </strong>
           <small>{role}</small>
         </span>
 
@@ -370,6 +379,7 @@ function EmployeePanel({ profile, onLogout }) {
     <main className="page">
       <Header
         name={profile.full_name}
+        employeeNumber={profile.employee_number}
         role="Çalışan"
         onLogout={onLogout}
       />
@@ -377,7 +387,9 @@ function EmployeePanel({ profile, onLogout }) {
       <div className="content">
         <div className="hero">
           <p className="eyebrow">ÇALIŞAN PANELİ</p>
+
           <h1>Çalışma planını gönder.</h1>
+
           <p className="muted">
             Tarih, saat ve çalışma yerini gir.
           </p>
@@ -495,20 +507,25 @@ function AdminPanel({ profile, onLogout }) {
   );
 
   async function load() {
-    const [{ data: ss }, { data: locs }] = await Promise.all([
-      supabase
-        .from('shifts')
-        .select(
-          'id,date,start_time,end_time,status,profiles(full_name),locations(name)'
-        )
-        .order('date', { ascending: false })
-        .order('start_time'),
+    const [{ data: ss, error: shiftError }, { data: locs }] =
+      await Promise.all([
+        supabase
+          .from('shifts')
+          .select(
+            'id,date,start_time,end_time,status,profiles(id,full_name,employee_number),locations(name)'
+          )
+          .order('date', { ascending: false })
+          .order('start_time'),
 
-      supabase
-        .from('locations')
-        .select('id,name')
-        .order('name'),
-    ]);
+        supabase
+          .from('locations')
+          .select('id,name')
+          .order('name'),
+      ]);
+
+    if (shiftError) {
+      console.error(shiftError);
+    }
 
     setShifts(ss || []);
     setLocations(locs || []);
@@ -546,19 +563,37 @@ function AdminPanel({ profile, onLogout }) {
     }
   }
 
-  const filtered = useMemo(
-    () =>
-      shifts.filter(
-        (s) =>
-          (!search ||
-            (s.profiles?.full_name || '')
-              .toLowerCase()
-              .includes(search.toLowerCase())) &&
-          (!date || s.date === date) &&
-          (!location || s.locations?.name === location)
-      ),
-    [shifts, search, date, location]
-  );
+  const filtered = useMemo(() => {
+    const searchTerm = normalizeText(search.trim());
+
+    return shifts.filter((s) => {
+      const employeeName = normalizeText(
+        s.profiles?.full_name
+      );
+
+      const employeeNumber = normalizeText(
+        s.profiles?.employee_number
+      );
+
+      const matchesSearch =
+        !searchTerm ||
+        employeeName.includes(searchTerm) ||
+        employeeNumber.includes(searchTerm);
+
+      const matchesDate =
+        !date || s.date === date;
+
+      const matchesLocation =
+        !location ||
+        s.locations?.name === location;
+
+      return (
+        matchesSearch &&
+        matchesDate &&
+        matchesLocation
+      );
+    });
+  }, [shifts, search, date, location]);
 
   const weekDays = useMemo(
     () => getWeekDays(weekStart),
@@ -571,19 +606,30 @@ function AdminPanel({ profile, onLogout }) {
     );
   }, [filtered, weekDays]);
 
-  const employeeNames = useMemo(() => {
-    return [
-      ...new Set(
-        weekShifts
-          .map((s) => s.profiles?.full_name)
-          .filter(Boolean)
-      ),
-    ];
+  const employees = useMemo(() => {
+    const map = new Map();
+
+    weekShifts.forEach((shift) => {
+      const employeeId =
+        shift.profiles?.id ||
+        shift.profiles?.employee_number ||
+        shift.profiles?.full_name;
+
+      if (employeeId && !map.has(employeeId)) {
+        map.set(employeeId, shift.profiles);
+      }
+    });
+
+    return Array.from(map.values());
   }, [weekShifts]);
 
   function changeWeek(amount) {
     const next = new Date(weekStart);
-    next.setDate(next.getDate() + amount * 7);
+
+    next.setDate(
+      next.getDate() + amount * 7
+    );
+
     setWeekStart(next);
   }
 
@@ -594,6 +640,7 @@ function AdminPanel({ profile, onLogout }) {
   function exportCsv() {
     const rows = [
       [
+        'Personel No',
         'İsim Soyisim',
         'Tarih',
         'Başlangıç',
@@ -601,7 +648,9 @@ function AdminPanel({ profile, onLogout }) {
         'Yer',
         'Durum',
       ],
+
       ...filtered.map((s) => [
+        s.profiles?.employee_number || '',
         s.profiles?.full_name || '',
         s.date,
         s.start_time.slice(0, 5),
@@ -638,13 +687,17 @@ function AdminPanel({ profile, onLogout }) {
   }
 
   const total = shifts.reduce(
-    (n, s) => n + duration(s.start_time, s.end_time),
+    (n, s) =>
+      n + duration(
+        s.start_time,
+        s.end_time
+      ),
     0
   );
 
-  const employees = new Set(
+  const employeeCount = new Set(
     shifts
-      .map((s) => s.profiles?.full_name)
+      .map((s) => s.profiles?.id)
       .filter(Boolean)
   ).size;
 
@@ -656,6 +709,7 @@ function AdminPanel({ profile, onLogout }) {
     <main className="page">
       <Header
         name={profile.full_name}
+        employeeNumber={profile.employee_number}
         role="Yönetici"
         onLogout={onLogout}
       />
@@ -663,8 +717,12 @@ function AdminPanel({ profile, onLogout }) {
       <div className="content">
         <div className="admin-head">
           <div>
-            <p className="eyebrow">YÖNETİCİ PANELİ</p>
+            <p className="eyebrow">
+              YÖNETİCİ PANELİ
+            </p>
+
             <h1>Planning</h1>
+
             <p className="muted">
               Şirketin bütün çalışma planlarını yönet.
             </p>
@@ -686,7 +744,7 @@ function AdminPanel({ profile, onLogout }) {
 
           <div className="stat">
             <span>Çalışan</span>
-            <strong>{employees}</strong>
+            <strong>{employeeCount}</strong>
           </div>
 
           <div className="stat">
@@ -697,25 +755,36 @@ function AdminPanel({ profile, onLogout }) {
 
         <div className="toolbar card">
           <input
-            placeholder="Çalışan ara..."
+            placeholder="Çalışan veya personel no ara..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
           />
 
           <input
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) =>
+              setDate(e.target.value)
+            }
           />
 
           <select
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={(e) =>
+              setLocation(e.target.value)
+            }
           >
-            <option value="">Tüm yerler</option>
+            <option value="">
+              Tüm yerler
+            </option>
 
             {locations.map((l) => (
-              <option key={l.id} value={l.name}>
+              <option
+                key={l.id}
+                value={l.name}
+              >
                 {l.name}
               </option>
             ))}
@@ -725,14 +794,19 @@ function AdminPanel({ profile, onLogout }) {
         <section className="card">
           <div className="calendar-header">
             <div>
-              <p className="eyebrow">HAFTALIK PLANNING</p>
+              <p className="eyebrow">
+                HAFTALIK PLANNING
+              </p>
+
               <h2>{weekTitle}</h2>
             </div>
 
             <div className="calendar-actions">
               <button
                 className="secondary"
-                onClick={() => changeWeek(-1)}
+                onClick={() =>
+                  changeWeek(-1)
+                }
               >
                 ← Önceki
               </button>
@@ -746,7 +820,9 @@ function AdminPanel({ profile, onLogout }) {
 
               <button
                 className="secondary"
-                onClick={() => changeWeek(1)}
+                onClick={() =>
+                  changeWeek(1)
+                }
               >
                 Sonraki →
               </button>
@@ -759,69 +835,105 @@ function AdminPanel({ profile, onLogout }) {
                 ÇALIŞAN
               </div>
 
-              {weekDays.map((day, index) => (
-                <div className="day-column" key={day}>
-                  <strong>{dayNames[index]}</strong>
-                  <span>{formatDate(day)}</span>
-                </div>
-              ))}
+              {weekDays.map(
+                (day, index) => (
+                  <div
+                    className="day-column"
+                    key={day}
+                  >
+                    <strong>
+                      {dayNames[index]}
+                    </strong>
+
+                    <span>
+                      {formatDate(day)}
+                    </span>
+                  </div>
+                )
+              )}
             </div>
 
-            {!employeeNames.length ? (
+            {!employees.length ? (
               <div className="empty">
                 Bu haftada plan bulunmuyor.
               </div>
             ) : (
-              employeeNames.map((employeeName) => (
+              employees.map((employee) => (
                 <div
                   className="calendar-row"
-                  key={employeeName}
+                  key={
+                    employee.id ||
+                    employee.employee_number ||
+                    employee.full_name
+                  }
                 >
                   <div className="employee-column employee-name">
-                    {employeeName}
+                    <strong>
+                      {employee.full_name}
+                    </strong>
+
+                    {employee.employee_number && (
+                      <span>
+                        {employee.employee_number}
+                      </span>
+                    )}
                   </div>
 
                   {weekDays.map((day) => {
-                    const dayShifts = weekShifts.filter(
-                      (s) =>
-                        s.date === day &&
-                        s.profiles?.full_name ===
-                          employeeName
-                    );
+                    const dayShifts =
+                      weekShifts.filter(
+                        (s) =>
+                          s.date === day &&
+                          s.profiles?.id ===
+                            employee.id
+                      );
 
                     return (
                       <div
                         className="day-column shift-cell"
-                        key={`${employeeName}-${day}`}
+                        key={`${employee.id}-${day}`}
                       >
-                        {dayShifts.map((shift) => (
-                          <div
-                            className={`shift-card ${shift.status}`}
-                            key={shift.id}
-                            title={`${employeeName} • ${shift.start_time.slice(
-                              0,
-                              5
-                            )}–${shift.end_time.slice(
-                              0,
-                              5
-                            )} • ${
-                              shift.locations?.name || '-'
-                            }`}
-                          >
-                            <strong>
-                              {shift.start_time.slice(0, 5)}–
-                              {shift.end_time.slice(0, 5)}
-                            </strong>
+                        {dayShifts.map(
+                          (shift) => (
+                            <div
+                              className={`shift-card ${shift.status}`}
+                              key={shift.id}
+                              title={`${employee.full_name} • ${shift.start_time.slice(
+                                0,
+                                5
+                              )}–${shift.end_time.slice(
+                                0,
+                                5
+                              )} • ${
+                                shift.locations?.name ||
+                                '-'
+                              }`}
+                            >
+                              <strong>
+                                {shift.start_time.slice(
+                                  0,
+                                  5
+                                )}
+                                –
+                                {shift.end_time.slice(
+                                  0,
+                                  5
+                                )}
+                              </strong>
 
-                            <span>
-                              {shift.locations?.name || '-'}
-                            </span>
+                              <span>
+                                {shift.locations?.name ||
+                                  '-'}
+                              </span>
 
-                            <small>
-                              {statusText(shift.status)}
-                            </small>
-                          </div>
-                        ))}
+                              <small>
+                                {statusText(
+                                  shift.status
+                                )}
+                              </small>
+                            </div>
+                          )
+                        )}
                       </div>
                     );
                   })}
@@ -836,6 +948,7 @@ function AdminPanel({ profile, onLogout }) {
             <table>
               <thead>
                 <tr>
+                  <th>Personel No</th>
                   <th>Çalışan</th>
                   <th>Tarih</th>
                   <th>Saat</th>
@@ -848,6 +961,13 @@ function AdminPanel({ profile, onLogout }) {
               <tbody>
                 {filtered.map((s) => (
                   <tr key={s.id}>
+                    <td>
+                      <span className="badge">
+                        {s.profiles?.employee_number ||
+                          '-'}
+                      </span>
+                    </td>
+
                     <td>
                       <strong>
                         {s.profiles?.full_name ||
@@ -896,7 +1016,9 @@ function AdminPanel({ profile, onLogout }) {
                     <td>
                       <button
                         className="delete"
-                        onClick={() => remove(s.id)}
+                        onClick={() =>
+                          remove(s.id)
+                        }
                       >
                         Sil
                       </button>
