@@ -15,7 +15,7 @@ const translations = {
   tr: {
     loading: 'Yükleniyor...', profileLoading: 'Profil yükleniyor...',
     login: 'GİRİŞ', signup: 'YENİ HESAP', welcome: 'Hoş geldin.',
-    createAccount: 'Hesap oluştur.', loginDesc: 'Planning sistemine giriş yap.',
+    createAccount: 'Hesap oluştur.', loginDesc: 'Planning sistemine giriş yap.', companyName: 'SUPRA & INFRA',
     signupDesc: 'Çalışan hesabını oluştur.', name: 'İsim Soyisim',
     phone: 'Telefon numarası', emailOrPhone: 'E-posta veya telefon numarası',
     email: 'E-posta', password: 'Şifre', wait: 'Bekleyin...',
@@ -69,7 +69,7 @@ const translations = {
   },
   nl: {
     loading: 'Laden...', profileLoading: 'Profiel laden...', login: 'INLOGGEN', signup: 'NIEUW ACCOUNT',
-    welcome: 'Welkom.', createAccount: 'Account aanmaken.', loginDesc: 'Log in op het planningssysteem.',
+    welcome: 'Welkom.', createAccount: 'Account aanmaken.', loginDesc: 'Log in op het planningssysteem.', companyName: 'SUPRA & INFRA',
     signupDesc: 'Maak je medewerkersaccount aan.', name: 'Voor- en achternaam', phone: 'Telefoonnummer',
     emailOrPhone: 'E-mail of telefoonnummer', email: 'E-mail', password: 'Wachtwoord', wait: 'Even geduld...',
     loginBtn: 'INLOGGEN →', signupBtn: 'ACCOUNT AANMAKEN →', phonePlaceholder: '+31 6 12345678',
@@ -113,7 +113,7 @@ const translations = {
   },
   en: {
     loading: 'Loading...', profileLoading: 'Loading profile...', login: 'LOGIN', signup: 'NEW ACCOUNT',
-    welcome: 'Welcome.', createAccount: 'Create an account.', loginDesc: 'Sign in to the planning system.',
+    welcome: 'Welcome.', createAccount: 'Create an account.', loginDesc: 'Sign in to the planning system.', companyName: 'SUPRA & INFRA',
     signupDesc: 'Create your employee account.', name: 'Full name', phone: 'Phone number',
     emailOrPhone: 'Email or phone number', email: 'Email', password: 'Password', wait: 'Please wait...',
     loginBtn: 'LOG IN →', signupBtn: 'CREATE ACCOUNT →', phonePlaceholder: '+31 6 12345678',
@@ -488,32 +488,78 @@ function AuthScreen({ language, setLanguage }) {
     setBusy(false);
   }
 
+function CompanyBrand({ compact = false, language = 'tr' }) {
+  const t = translations[language] || translations.tr;
+
+  return (
+    <div
+      className={compact ? 'company-brand company-brand-compact' : 'company-brand'}
+      aria-label={t.companyName}
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: compact ? '2px' : '5px',
+        color: '#15233b',
+        letterSpacing: compact ? '0.16em' : '0.22em',
+        fontWeight: 800,
+        lineHeight: 1,
+      }}
+    >
+      <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '8px' : '12px' }}>
+        <span>{'SUPRA'}</span>
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'block',
+            width: compact ? '42px' : '68px',
+            height: compact ? '3px' : '4px',
+            background: '#15233b',
+            borderRadius: '999px',
+          }}
+        />
+      </span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '8px' : '12px' }}>
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'block',
+            width: compact ? '34px' : '54px',
+            height: compact ? '3px' : '4px',
+            background: '#15233b',
+            borderRadius: '999px',
+          }}
+        />
+        <span>&amp; INFRA</span>
+      </span>
+    </div>
+  );
+}
+
   return (
     <main className="auth-page" style={{ position: 'relative' }}>
       <LanguageSelector language={language} onChange={changeLanguage} />
       <div className="auth-card">
-        <div className="logo">
-          COMPANY <span>PLANNING</span>
+        <div style={{ marginBottom: '30px' }}>
+          <CompanyBrand language={language} />
         </div>
 
         <p className="eyebrow">
-          {mode === 'login' ? 'GİRİŞ' : 'YENİ HESAP'}
+          {mode === 'login' ? t.login : t.signup}
         </p>
 
         <h1>
-          {mode === 'login' ? 'Hoş geldin.' : 'Hesap oluştur.'}
+          {mode === 'login' ? t.welcome : t.createAccount}
         </h1>
 
         <p className="muted">
-          {mode === 'login'
-            ? 'Planning sistemine giriş yap.'
-            : 'Çalışan hesabını oluştur.'}
+          {mode === 'login' ? t.loginDesc : t.signupDesc}
         </p>
 
         <form onSubmit={submit} className="form">
           {mode === 'signup' && (
             <label>
-              İsim Soyisim
+              {t.name}
               <input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -581,9 +627,7 @@ function AuthScreen({ language, setLanguage }) {
             setMessage('');
           }}
         >
-          {mode === 'login'
-            ? 'İlk kez mi kullanıyorsun? Hesap oluştur'
-            : 'Zaten hesabın var mı? Giriş yap'}
+          {mode === 'login' ? t.signupPrompt : t.loginPrompt}
         </button>
       </div>
     </main>
@@ -593,9 +637,7 @@ function AuthScreen({ language, setLanguage }) {
 function Header({ name, employeeNumber, role, onLogout, language, setLanguage }) {
   return (
     <header className="topbar" style={{ position: 'relative' }}>
-      <div className="logo">
-        COMPANY <span>PLANNING</span>
-      </div>
+      <CompanyBrand compact language={language} />
 
       <LanguageSelector language={language} onChange={setLanguage} />
 
@@ -1485,7 +1527,10 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
               YÖNETİCİ PANELİ
             </p>
 
-            <h1>Planning</h1>
+            <div style={{ marginBottom: '18px' }}>
+              <CompanyBrand compact language={language} />
+            </div>
+            <h1>{t.planning}</h1>
 
             <p className="muted">
               {t.adminDesc}
