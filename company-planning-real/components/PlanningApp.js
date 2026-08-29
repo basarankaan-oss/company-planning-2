@@ -66,6 +66,11 @@ const translations = {
     newRequestNotification: 'Yeni çalışma talebin var.',
     pendingRequests: 'Bekleyen talepler',
     requestResponseNotification: 'Bir çalışma talebine cevap geldi.',
+    profile: 'Profilim', profileInfo: 'Profil Bilgileri', roleLabel: 'Rol', languageLabel: 'Dil',
+    multipleEmployees: 'Birden fazla çalışan seçebilirsiniz.', selectedEmployees: 'çalışan seçildi',
+    chooseEmployees: 'Çalışanları seçin', sendToSelected: 'Seçilen çalışanlara gönder',
+    requestSentMultiple: '✓ Çalışma talepleri seçilen çalışanlara başarıyla gönderildi.',
+    conflictEmployees: 'Çakışma bulunan çalışanlar', selectAtLeastOne: 'En az bir çalışan seçin.',
   },
   nl: {
     loading: 'Laden...', profileLoading: 'Profiel laden...', login: 'INLOGGEN', signup: 'NIEUW ACCOUNT',
@@ -110,6 +115,11 @@ const translations = {
     newRequestNotification: 'Je hebt een nieuw werkverzoek.',
     pendingRequests: 'Openstaande verzoeken',
     requestResponseNotification: 'Er is een antwoord op een werkverzoek ontvangen.',
+    profile: 'Mijn profiel', profileInfo: 'Profielgegevens', roleLabel: 'Rol', languageLabel: 'Taal',
+    multipleEmployees: 'Je kunt meerdere medewerkers selecteren.', selectedEmployees: 'medewerkers geselecteerd',
+    chooseEmployees: 'Selecteer medewerkers', sendToSelected: 'Verstuur naar geselecteerde medewerkers',
+    requestSentMultiple: '✓ Werkverzoeken zijn succesvol naar de geselecteerde medewerkers verstuurd.',
+    conflictEmployees: 'Medewerkers met een dienstconflict', selectAtLeastOne: 'Selecteer minstens één medewerker.',
   },
   en: {
     loading: 'Loading...', profileLoading: 'Loading profile...', login: 'LOGIN', signup: 'NEW ACCOUNT',
@@ -151,6 +161,11 @@ const translations = {
     newRequestNotification: 'You have a new work request.',
     pendingRequests: 'Pending requests',
     requestResponseNotification: 'A work request has received a response.',
+    profile: 'My Profile', profileInfo: 'Profile Information', roleLabel: 'Role', languageLabel: 'Language',
+    multipleEmployees: 'You can select multiple employees.', selectedEmployees: 'employees selected',
+    chooseEmployees: 'Select employees', sendToSelected: 'Send to selected employees',
+    requestSentMultiple: '✓ Work requests were successfully sent to the selected employees.',
+    conflictEmployees: 'Employees with a shift conflict', selectAtLeastOne: 'Select at least one employee.',
   },
 };
 
@@ -299,7 +314,7 @@ export default function PlanningApp() {
     async function loadProfile(id) {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id,full_name,role,employee_number,language')
+        .select('id,full_name,role,employee_number,language,email,phone')
         .eq('id', id)
         .single();
 
@@ -1072,8 +1087,18 @@ function AuthScreen({ language, setLanguage }) {
   );
 }
 
-function Header({ name, employeeNumber, role, onLogout, language, setLanguage }) {
+function Header({
+  name,
+  employeeNumber,
+  role,
+  email,
+  phone,
+  onLogout,
+  language,
+  setLanguage,
+}) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const t = translations[language] || translations.tr;
 
   const initials = (name || 'U')
@@ -1085,98 +1110,169 @@ function Header({ name, employeeNumber, role, onLogout, language, setLanguage })
     .toUpperCase();
 
   return (
-    <header className="topbar" style={{ position: 'relative' }}>
-      <CompanyBrand compact language={language} />
+    <>
+      <header className="topbar" style={{ position: 'relative' }}>
+        <CompanyBrand compact language={language} />
 
-      <LanguageSelector language={language} onChange={setLanguage} />
+        <LanguageSelector language={language} onChange={setLanguage} />
 
-      <div className="user">
-        <div className="profile-menu-wrap">
-          <button
-            type="button"
-            className="profile-trigger"
-            aria-expanded={profileOpen}
-            aria-label="Profil menüsü"
-            onClick={() => setProfileOpen((open) => !open)}
+        <div className="user">
+          <div className="profile-menu-wrap">
+            <button
+              type="button"
+              className="profile-trigger"
+              aria-expanded={profileOpen}
+              aria-label="Profil menüsü"
+              onClick={() => setProfileOpen((open) => !open)}
+            >
+              <span className="profile-avatar">{initials}</span>
+
+              <span className="profile-trigger-text">
+                <strong>{name}</strong>
+                <small>{role}</small>
+              </span>
+
+              <span className="profile-chevron">⌄</span>
+            </button>
+
+            {profileOpen && (
+              <div className="profile-dropdown">
+                <div className="profile-summary">
+                  <span className="profile-avatar">{initials}</span>
+                  <div className="profile-summary-text">
+                    <strong>{name}</strong>
+                    <span>{role}</span>
+                  </div>
+                </div>
+
+                <div className="profile-info">
+                  <div className="profile-info-row">
+                    <span>{t.employeeNo || 'Personel No'}</span>
+                    <span>{employeeNumber || '-'}</span>
+                  </div>
+
+                  <div className="profile-info-row">
+                    <span>{t.roleLabel || 'Rol'}</span>
+                    <span>{role}</span>
+                  </div>
+
+                  <div className="profile-info-row">
+                    <span>{t.languageLabel || 'Dil'}</span>
+                    <span>
+                      {LANGUAGES[language]?.flag} {LANGUAGES[language]?.label}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="profile-actions">
+                  <button
+                    type="button"
+                    className="secondary profile-action"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      setProfileModalOpen(true);
+                    }}
+                  >
+                    👤 {t.profile || 'Profilim'}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="secondary profile-action"
+                    onClick={() => {
+                      setProfileOpen(false);
+                    }}
+                  >
+                    🌐 {t.languageLabel || 'Dil'}: {LANGUAGES[language]?.label}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="secondary profile-action danger"
+                    onClick={onLogout}
+                  >
+                    🚪 {t.logout || 'Çıkış'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {profileModalOpen && (
+        <div
+          onClick={() => setProfileModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,.38)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 1500,
+          }}
+        >
+          <div
+            className="card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(520px, 100%)',
+              position: 'relative',
+              padding: '28px',
+            }}
           >
-            <span className="profile-avatar">{initials}</span>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setProfileModalOpen(false)}
+              style={{ position: 'absolute', top: '18px', right: '18px' }}
+            >
+              {t.close || 'Kapat'}
+            </button>
 
-            <span className="profile-trigger-text">
-              <strong>{name}</strong>
-              <small>{role}</small>
-            </span>
-
-            <span className="profile-chevron">⌄</span>
-          </button>
-
-          {profileOpen && (
-            <div className="profile-dropdown">
-              <div className="profile-summary">
-                <span className="profile-avatar">{initials}</span>
-                <div className="profile-summary-text">
-                  <strong>{name}</strong>
-                  <span>{role}</span>
-                </div>
-              </div>
-
-              <div className="profile-info">
-                <div className="profile-info-row">
-                  <span>{t.employeeNo || 'Personel No'}</span>
-                  <span>{employeeNumber || '-'}</span>
-                </div>
-
-                <div className="profile-info-row">
-                  <span>Rol</span>
-                  <span>{role}</span>
-                </div>
-
-                <div className="profile-info-row">
-                  <span>Dil</span>
-                  <span>
-                    {LANGUAGES[language]?.flag} {LANGUAGES[language]?.label}
-                  </span>
-                </div>
-              </div>
-
-              <div className="profile-actions">
-                <button
-                  type="button"
-                  className="secondary profile-action"
-                  onClick={() => {
-                    setProfileOpen(false);
-                    document.querySelector('.topbar')?.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'start',
-                    });
-                  }}
-                >
-                  👤 Profilim
-                </button>
-
-                <button
-                  type="button"
-                  className="secondary profile-action"
-                  onClick={() => {
-                    setProfileOpen(false);
-                    setLanguage(language);
-                  }}
-                >
-                  🌐 Dil: {LANGUAGES[language]?.label}
-                </button>
-
-                <button
-                  type="button"
-                  className="secondary profile-action danger"
-                  onClick={onLogout}
-                >
-                  🚪 {t.logout || 'Çıkış'}
-                </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px', paddingRight: '70px' }}>
+              <span className="profile-avatar" style={{ width: '58px', height: '58px', fontSize: '18px' }}>
+                {initials}
+              </span>
+              <div>
+                <p className="eyebrow">{t.profileInfo || 'Profil Bilgileri'}</p>
+                <h2 style={{ margin: '4px 0 0' }}>{name}</h2>
+                <p className="muted" style={{ margin: '4px 0 0' }}>{role}</p>
               </div>
             </div>
-          )}
+
+            <div style={{ display: 'grid', gap: '10px' }}>
+              <div className="notice">
+                <strong>{t.employeeNo || 'Personel No'}</strong><br />
+                {employeeNumber || '-'}
+              </div>
+
+              <div className="notice">
+                <strong>{t.emailLabel || 'E-posta'}</strong><br />
+                {email || '-'}
+              </div>
+
+              <div className="notice">
+                <strong>{t.phoneLabel || 'Telefon'}</strong><br />
+                {phone || '-'}
+              </div>
+
+              <div className="notice">
+                <strong>{t.roleLabel || 'Rol'}</strong><br />
+                {role}
+              </div>
+
+              <div className="notice">
+                <strong>{t.languageLabel || 'Dil'}</strong><br />
+                {LANGUAGES[language]?.flag} {LANGUAGES[language]?.label}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </header>
+      )}
+    </>
   );
 }
 
@@ -1273,32 +1369,62 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
     }
 
     if (status === 'accepted') {
-      const { error: shiftError } = await supabase
+      // Aynı talebin ikinci kez kabul edilmesi halinde çift vardiya oluşmasını engelle.
+      const { data: existingShift, error: existingShiftError } = await supabase
         .from('shifts')
-        .insert({
-          employee_id: profile.id,
-          date: request.date,
-          start_time: request.start_time,
-          end_time: request.end_time,
-          location_id: request.location_id,
-          status: 'approved',
-        });
+        .select('id')
+        .eq('employee_id', profile.id)
+        .eq('date', request.date)
+        .eq('start_time', request.start_time)
+        .eq('end_time', request.end_time)
+        .eq('location_id', request.location_id)
+        .limit(1)
+        .maybeSingle();
 
-      if (shiftError) {
-        console.error(shiftError);
-
-        setMessage(
-          'Talep kabul edildi ancak plan oluşturulurken bir hata oluştu: ' +
-            shiftError.message
-        );
-
+      if (existingShiftError) {
+        console.error(existingShiftError);
+        setMessage('Talep kabul edildi ancak mevcut plan kontrol edilemedi: ' + existingShiftError.message);
         await loadRequests();
         return;
       }
 
-      setMessage(
-        '✓ Çalışabileceğin onaylandı ve planın takvime eklendi.'
-      );
+      let createdShiftId = existingShift?.id || null;
+
+      if (!createdShiftId) {
+        const { data: createdShift, error: shiftError } = await supabase
+          .from('shifts')
+          .insert({
+            employee_id: profile.id,
+            date: request.date,
+            start_time: request.start_time,
+            end_time: request.end_time,
+            location_id: request.location_id,
+            status: 'approved',
+          })
+          .select('id')
+          .single();
+
+        if (shiftError) {
+          console.error(shiftError);
+          setMessage(
+            'Talep kabul edildi ancak plan oluşturulurken bir hata oluştu: ' +
+              shiftError.message
+          );
+          await loadRequests();
+          return;
+        }
+
+        createdShiftId = createdShift?.id || null;
+      }
+
+      // INSERT gerçekten oluştu mu diye doğrula.
+      if (!createdShiftId) {
+        setMessage('Talep kabul edildi ancak plan kaydı doğrulanamadı.');
+        await loadRequests();
+        return;
+      }
+
+      setMessage('✓ Çalışabileceğin onaylandı ve planın takvime eklendi.');
     } else {
       setMessage('Talep reddedildi.');
     }
@@ -1318,6 +1444,8 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
         name={profile.full_name}
         employeeNumber={profile.employee_number}
         role={translations[language].employee}
+        email={profile.email}
+        phone={profile.phone}
         onLogout={onLogout}
         language={language}
         setLanguage={setLanguage}
@@ -1507,7 +1635,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
   );
 
   // Çalışma talebi formu
-  const [requestEmployee, setRequestEmployee] = useState('');
+  const [requestEmployees, setRequestEmployees] = useState([]);
   const [requestDate, setRequestDate] = useState('');
   const [requestStart, setRequestStart] = useState('');
   const [requestEnd, setRequestEnd] = useState('');
@@ -1580,6 +1708,8 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
   }, []);
 
   useEffect(() => {
+    const refreshTimers = [];
+
     const channel = supabase
       .channel(`admin-request-notifications-${profile.id}`)
       .on(
@@ -1590,12 +1720,17 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
           table: 'shift_requests',
         },
         (payload) => {
-          // Realtime filtrelemesini burada yapıyoruz.
-          // Böylece admin_id filtresi nedeniyle bildirimin kaçırılmasını önlüyoruz.
-          if (payload.new?.admin_id === profile.id) {
-            setAdminNotification(t.requestResponseNotification);
-            load();
-          }
+          if (payload.new?.admin_id !== profile.id) return;
+
+          setAdminNotification(t.requestResponseNotification);
+
+          // Çalışan önce request'i UPDATE edip hemen ardından shift INSERT ediyor.
+          // Realtime UPDATE admin'e INSERT'ten önce ulaşabildiği için iki gecikmeli
+          // yenileme ile yarış durumunu ortadan kaldırıyoruz.
+          load();
+
+          refreshTimers.push(window.setTimeout(() => load(), 700));
+          refreshTimers.push(window.setTimeout(() => load(), 1600));
         }
       )
       .subscribe((status) => {
@@ -1604,10 +1739,12 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         }
       });
 
-  return () => {
+    return () => {
+      refreshTimers.forEach((timer) => window.clearTimeout(timer));
       supabase.removeChannel(channel);
     };
   }, [profile.id, language]);
+
 
   const notificationItems = useMemo(() => {
     const items = [];
@@ -1742,74 +1879,84 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
     setRequestMessage('');
 
     if (
-      !requestEmployee ||
+      !requestEmployees.length ||
       !requestDate ||
       !requestStart ||
       !requestEnd ||
       !requestLocation
     ) {
       setRequestMessage(
-        'Lütfen çalışan, tarih, saat ve şehir alanlarını doldurun.'
+        !requestEmployees.length
+          ? (t.selectAtLeastOne || 'En az bir çalışan seçin.')
+          : (t.fillFields || 'Lütfen çalışan, tarih, saat ve şehir alanlarını doldurun.')
       );
       return;
     }
 
     if (requestEnd <= requestStart) {
-      setRequestMessage(
-        t.endAfterStart
-      );
+      setRequestMessage(t.endAfterStart);
       return;
     }
 
-    const conflict = findShiftConflict(
-      requestEmployee,
-      requestDate,
-      requestStart,
-      requestEnd
-    );
+    const conflicts = requestEmployees
+      .map((employeeId) => ({
+        employeeId,
+        employee: employees.find((item) => item.id === employeeId),
+        conflict: findShiftConflict(
+          employeeId,
+          requestDate,
+          requestStart,
+          requestEnd
+        ),
+      }))
+      .filter((item) => item.conflict);
 
-    if (conflict) {
-      const employee = employees.find(
-        (item) => item.id === requestEmployee
-      );
+    if (conflicts.length) {
+      const names = conflicts
+        .map((item) => item.employee?.full_name || t.employee)
+        .join(', ');
 
-      const employeeName = employee?.full_name || t.employee;
-      const conflictLocation = conflict.locations?.name || t.place;
-      const conflictStart = conflict.start_time.slice(0, 5);
-      const conflictEnd = conflict.end_time.slice(0, 5);
+      const details = conflicts
+        .map((item) => {
+          const conflict = item.conflict;
+          return `${item.employee?.full_name || t.employee}: ${conflict.start_time.slice(0, 5)}–${conflict.end_time.slice(0, 5)} · ${conflict.locations?.name || t.place}`;
+        })
+        .join(' | ');
 
       setRequestMessage(
-        `⚠️ ${t.shiftConflict}: ${employeeName} — ` +
-        `${t.existingShift}: ${conflictStart}–${conflictEnd} · ` +
-        `${conflictLocation}. ${t.cannotSendConflict}`
+        `⚠️ ${t.conflictEmployees || 'Çakışma bulunan çalışanlar'}: ${names}. ${details}. ${t.cannotSendConflict}`
       );
       return;
     }
 
     setRequestBusy(true);
 
+    const rows = requestEmployees.map((employeeId) => ({
+      employee_id: employeeId,
+      admin_id: profile.id,
+      location_id: requestLocation,
+      date: requestDate,
+      start_time: requestStart,
+      end_time: requestEnd,
+      note: requestNote.trim() || null,
+      status: 'pending',
+    }));
+
     const { error } = await supabase
       .from('shift_requests')
-      .insert({
-        employee_id: requestEmployee,
-        admin_id: profile.id,
-        location_id: requestLocation,
-        date: requestDate,
-        start_time: requestStart,
-        end_time: requestEnd,
-        note: requestNote.trim() || null,
-        status: 'pending',
-      });
+      .insert(rows);
 
     if (error) {
       console.error(error);
       setRequestMessage(error.message);
     } else {
       setRequestMessage(
-        '✓ Çalışma talebi başarıyla gönderildi.'
+        requestEmployees.length === 1
+          ? t.requestSent
+          : t.requestSentMultiple
       );
 
-      setRequestEmployee('');
+      setRequestEmployees([]);
       setRequestDate('');
       setRequestStart('');
       setRequestEnd('');
@@ -2090,6 +2237,8 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         name={profile.full_name}
         employeeNumber={profile.employee_number}
         role={translations[language].admin}
+        email={profile.email}
+        phone={profile.phone}
         onLogout={onLogout}
         language={language}
         setLanguage={setLanguage}
@@ -2457,30 +2606,90 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
           >
             <label>
               {t.employee}
-
-              <select
-                value={requestEmployee}
-                onChange={(e) =>
-                  setRequestEmployee(e.target.value)
-                }
-                required
+              <span
+                style={{
+                  display: 'block',
+                  fontWeight: 500,
+                  color: '#7b818a',
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
               >
-                <option value="">
-                  {t.chooseEmployee}
-                </option>
+                {t.multipleEmployees}
+              </span>
 
-                {employees.map((employee) => (
-                  <option
-                    key={employee.id}
-                    value={employee.id}
-                  >
-                    {employee.full_name}
-                    {employee.employee_number
-                      ? ` · ${employee.employee_number}`
-                      : ''}
-                  </option>
-                ))}
-              </select>
+              <div
+                style={{
+                  marginTop: '8px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  padding: '8px',
+                  maxHeight: '230px',
+                  overflowY: 'auto',
+                  background: '#fff',
+                }}
+              >
+                {!employees.length ? (
+                  <div className="muted" style={{ padding: '10px' }}>
+                    {t.noEmployee}
+                  </div>
+                ) : (
+                  employees.map((employee) => {
+                    const checked = requestEmployees.includes(employee.id);
+
+                    return (
+                      <label
+                        key={employee.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px',
+                          borderRadius: '9px',
+                          background: checked ? '#f3f6fa' : 'transparent',
+                          cursor: 'pointer',
+                          margin: 0,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setRequestEmployees((current) =>
+                              current.includes(employee.id)
+                                ? current.filter((id) => id !== employee.id)
+                                : [...current, employee.id]
+                            );
+                          }}
+                          style={{ minHeight: '18px', width: '18px' }}
+                        />
+                        <span>
+                          <strong>{employee.full_name}</strong>
+                          {employee.employee_number ? (
+                            <span
+                              style={{
+                                display: 'block',
+                                fontSize: '11px',
+                                color: '#7b818a',
+                                marginTop: '2px',
+                              }}
+                            >
+                              {employee.employee_number}
+                            </span>
+                          ) : null}
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+
+              <div
+                className="muted"
+                style={{ marginTop: '7px', fontSize: '11px' }}
+              >
+                {requestEmployees.length} {t.selectedEmployees}
+              </div>
             </label>
 
             <label>
