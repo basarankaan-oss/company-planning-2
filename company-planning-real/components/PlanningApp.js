@@ -408,6 +408,220 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
       .dashboard-content { width: calc(100% - 16px); }
       .card { padding: 16px !important; }
     }
+
+    /* =========================
+       MOBILE UI — SUPRA & INFRA
+       ========================= */
+    @media (max-width: 760px) {
+      .page {
+        min-height: 100dvh;
+        padding-bottom: 72px;
+      }
+
+      .content {
+        padding-top: 8px;
+      }
+
+      .admin-head {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 16px;
+      }
+
+      .admin-head > button,
+      .toolbar > button,
+      .toolbar .secondary,
+      .calendar-actions button {
+        width: 100%;
+      }
+
+      .toolbar {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+
+      .toolbar input,
+      .toolbar select {
+        width: 100%;
+      }
+
+      .calendar-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+      }
+
+      .calendar-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px !important;
+      }
+
+      /* Takvimi telefonda sıkıştırmak yerine yatay kaydır. */
+      .planning-calendar {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+      }
+
+      .planning-calendar .calendar-row {
+        min-width: 760px;
+      }
+
+      .planning-calendar .employee-column {
+        min-width: 150px;
+        max-width: 150px;
+      }
+
+      .planning-calendar .day-column {
+        min-width: 86px;
+      }
+
+      .shift-card {
+        padding: 9px !important;
+        border-radius: 10px !important;
+      }
+
+      .shift-card strong {
+        font-size: 12px;
+      }
+
+      .shift-card span,
+      .shift-card small {
+        font-size: 10px;
+      }
+
+      /* Çalışan talepleri telefonda iki sütun yerine kart düzeni. */
+      .mini-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 14px !important;
+      }
+
+      .mini-row > div:last-child {
+        width: 100%;
+        align-items: stretch !important;
+      }
+
+      .mini-row > div:last-child button {
+        flex: 1;
+        min-width: 0;
+      }
+
+      /* İstatistikler tek sütun. */
+      .stats {
+        grid-template-columns: 1fr !important;
+      }
+
+      .stat {
+        padding: 16px !important;
+      }
+
+      /* Tablolar ekrana taşmasın; yatay kaydırılabilsin. */
+      .table-card {
+        overflow: hidden;
+      }
+
+      .table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        border-radius: 12px;
+      }
+
+      .table-wrap table {
+        min-width: 700px;
+      }
+
+      /* Çalışan detay penceresi mobilde tam ekran hissi versin. */
+      .card[style*="maxHeight"] {
+        width: calc(100vw - 24px) !important;
+        max-height: calc(100dvh - 24px) !important;
+        margin: 12px;
+      }
+
+      /* Tarih/saat/lokasyon gibi form alanları daha rahat dokunulsun. */
+      input,
+      select,
+      button {
+        min-height: 46px;
+        font-size: 15px;
+      }
+
+      .primary,
+      .secondary {
+        min-height: 46px;
+      }
+
+      /* Uzun isim ve personel numarası taşmasın. */
+      .employee-name,
+      .topbar .user {
+        min-width: 0;
+      }
+
+      .employee-name strong {
+        overflow-wrap: anywhere;
+      }
+
+      /* Bildirimler telefonda okunabilir olsun. */
+      .notice {
+        word-break: break-word;
+      }
+
+      /* Auth ekranı */
+      .auth-page {
+        min-height: 100dvh;
+        width: 100%;
+      }
+
+      .auth-card {
+        width: 100%;
+        max-width: 460px;
+      }
+
+      .company-brand {
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .topbar {
+        align-items: flex-start !important;
+      }
+
+      .topbar .company-brand-compact {
+        max-width: 48vw;
+        overflow: hidden;
+      }
+
+      .topbar .user {
+        flex-wrap: wrap;
+      }
+
+      .topbar .user > span {
+        flex: 1 1 160px;
+      }
+
+      .topbar .user button {
+        flex: 0 0 auto;
+      }
+
+      .calendar-actions {
+        grid-template-columns: 1fr !important;
+      }
+
+      .calendar-actions button {
+        width: 100%;
+      }
+
+      h1 {
+        line-height: 1.05;
+      }
+    }
   `;
 
   return (
