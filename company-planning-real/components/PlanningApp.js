@@ -542,26 +542,43 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
     }
 
     .notification-wrap {
-      position: relative;
+      position: fixed !important;
+      top: 132px !important;
+      right: 32px !important;
+      z-index: 5000 !important;
     }
     .notification-button {
       position: relative;
-      min-width: 44px;
-      width: 44px;
-      height: 44px;
-      padding: 0 !important;
-      border-radius: 12px;
+      min-width: 48px;
+      width: auto;
+      height: 48px;
+      padding: 0 14px !important;
+      border-radius: 14px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 19px;
+      gap: 8px;
+      font-size: 18px;
+      border: 1px solid #e1e5ea;
+      background: #fff;
+      box-shadow: 0 8px 24px rgba(21,35,59,.10);
+      transition: transform .16s ease, box-shadow .16s ease;
+    }
+    .notification-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(21,35,59,.14);
+    }
+    .notification-button-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #172b4d;
     }
     .notification-count {
       position: absolute;
-      top: -5px;
-      right: -5px;
-      min-width: 19px;
-      height: 19px;
+      top: -7px;
+      right: -7px;
+      min-width: 20px;
+      height: 20px;
       padding: 0 5px;
       border-radius: 999px;
       background: #d92d20;
@@ -572,27 +589,44 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 2px 7px rgba(217,45,32,.25);
     }
     .notification-panel {
       position: absolute;
       right: 0;
       top: calc(100% + 10px);
-      width: min(390px, calc(100vw - 28px));
-      max-height: min(560px, calc(100vh - 110px));
+      width: min(410px, calc(100vw - 28px));
+      max-height: min(600px, calc(100vh - 110px));
       overflow: hidden;
-      z-index: 1100;
+      z-index: 5100;
       border: 1px solid #e5e7eb;
-      border-radius: 16px;
+      border-radius: 18px;
       background: #fff;
-      box-shadow: 0 18px 50px rgba(21,35,59,.16);
+      box-shadow: 0 22px 60px rgba(21,35,59,.18);
     }
     .notification-head {
-      padding: 15px 16px;
+      padding: 16px 18px;
       border-bottom: 1px solid #eef0f3;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      background: linear-gradient(180deg, #fff, #fbfcfd);
+    }
+    .notification-head-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .notification-head-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f4f8;
+      font-size: 16px;
     }
     .notification-list {
       max-height: 470px;
@@ -605,11 +639,12 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
       border-radius: 0;
       background: #fff;
       text-align: left;
-      padding: 14px 16px;
+      padding: 15px 18px;
       cursor: pointer;
       display: flex;
       gap: 11px;
       align-items: flex-start;
+      transition: background .14s ease;
     }
     .notification-item:hover {
       background: #f8fafc;
@@ -642,35 +677,60 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
       margin-top: 4px;
       color: #667085;
       font-size: 12px;
-      line-height: 1.4;
+      line-height: 1.45;
     }
     .notification-time {
       display: block;
-      margin-top: 6px;
+      margin-top: 7px;
       color: #98a2b3;
-      font-size: 11px;
+      font-size: 10px;
     }
     .notification-empty {
-      padding: 32px 20px;
+      padding: 42px 20px;
       text-align: center;
       color: #7b818a;
     }
+    .notification-empty-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 10px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f5f7;
+      font-size: 21px;
+    }
 
-      .notification-wrap {
-        top: 72px !important;
-        right: 14px !important;
-      }
     @media (max-width: 760px) {
+      .notification-wrap {
+        top: auto !important;
+        right: 14px !important;
+        bottom: 18px !important;
+      }
+      .notification-button {
+        width: 54px;
+        height: 54px;
+        padding: 0 !important;
+        border-radius: 17px;
+        box-shadow: 0 12px 32px rgba(21,35,59,.18);
+      }
+      .notification-button-label {
+        display: none;
+      }
       .notification-panel {
         position: fixed;
         right: 14px;
-        top: 72px;
-        width: min(390px, calc(100vw - 28px));
+        bottom: 82px;
+        top: auto;
+        width: min(410px, calc(100vw - 28px));
+        max-height: min(620px, calc(100vh - 120px));
       }
       .notification-list {
-        max-height: calc(100vh - 180px);
+        max-height: calc(100vh - 220px);
       }
     }
+
     .planning-calendar {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -2286,6 +2346,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
           onClick={() => setNotificationOpen((open) => !open)}
         >
           <span style={{ fontSize: '20px', lineHeight: 1 }}>🔔</span>
+          <span className="notification-button-label">Bildirimler</span>
           {unreadNotificationCount > 0 && (
             <span className="notification-count">
               {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
@@ -2296,10 +2357,15 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         {notificationOpen && (
           <div className="notification-panel">
             <div className="notification-head">
-              <div>
-                <strong>Bildirimler</strong>
-                <div className="muted" style={{ fontSize: '11px', marginTop: '3px' }}>
-                  {unreadNotificationCount} okunmamış
+              <div className="notification-head-title">
+                <span className="notification-head-icon">🔔</span>
+                <div>
+                  <strong>Bildirimler</strong>
+                  <div className="muted" style={{ fontSize: '11px', marginTop: '3px' }}>
+                    {unreadNotificationCount > 0
+                      ? `${unreadNotificationCount} okunmamış bildirim`
+                      : 'Yeni bildirimin yok'}
+                  </div>
                 </div>
               </div>
               {unreadNotificationCount > 0 && (
@@ -2316,7 +2382,13 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
 
             <div className="notification-list">
               {!notificationItems.length ? (
-                <div className="notification-empty">Henüz bildirim yok.</div>
+                <div className="notification-empty">
+                  <div className="notification-empty-icon">🔕</div>
+                  <strong>Henüz bildirim yok</strong>
+                  <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                    Yeni bir talep veya vardiya güncellemesi geldiğinde burada görünecek.
+                  </div>
+                </div>
               ) : (
                 notificationItems.map((item) => {
                   const unread = !readNotificationIds.includes(item.id);
