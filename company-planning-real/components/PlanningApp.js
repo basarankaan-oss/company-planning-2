@@ -25,6 +25,38 @@ const duration = (a, b) => {
   return m / 60;
 };
 
+const formatDate = (date) => {
+  return new Date(`${date}T12:00:00`).toLocaleDateString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+};
+
+const getMonday = (dateString) => {
+  const date = new Date(`${dateString}T12:00:00`);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+
+  date.setDate(date.getDate() + diff);
+
+  return date;
+};
+
+const formatISODate = (date) => {
+  return date.toISOString().slice(0, 10);
+};
+
+const getWeekDays = (monday) => {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+
+    return formatISODate(date);
+  });
+};
+
+const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
 export default function PlanningApp() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -458,6 +490,9 @@ function AdminPanel({ profile, onLogout }) {
   const [search, setSearch] = useState('');
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
+  const [weekStart, setWeekStart] = useState(
+    getMonday(today())
+  );
 
   async function load() {
     const [{ data: ss }, { data: locs }] = await Promise.all([
@@ -525,6 +560,37 @@ function AdminPanel({ profile, onLogout }) {
     [shifts, search, date, location]
   );
 
+  const weekDays = useMemo(
+    () => getWeekDays(weekStart),
+    [weekStart]
+  );
+
+  const weekShifts = useMemo(() => {
+    return filtered.filter((s) =>
+      weekDays.includes(s.date)
+    );
+  }, [filtered, weekDays]);
+
+  const employeeNames = useMemo(() => {
+    return [
+      ...new Set(
+        weekShifts
+          .map((s) => s.profiles?.full_name)
+          .filter(Boolean)
+      ),
+    ];
+  }, [weekShifts]);
+
+  function changeWeek(amount) {
+    const next = new Date(weekStart);
+    next.setDate(next.getDate() + amount * 7);
+    setWeekStart(next);
+  }
+
+  function goToCurrentWeek() {
+    setWeekStart(getMonday(today()));
+  }
+
   function exportCsv() {
     const rows = [
       [
@@ -581,6 +647,10 @@ function AdminPanel({ profile, onLogout }) {
       .map((s) => s.profiles?.full_name)
       .filter(Boolean)
   ).size;
+
+  const weekTitle = `${formatDate(
+    weekDays[0]
+  )} – ${formatDate(weekDays[6])}`;
 
   return (
     <main className="page">
@@ -651,6 +721,115 @@ function AdminPanel({ profile, onLogout }) {
             ))}
           </select>
         </div>
+
+        <section className="card">
+          <div className="calendar-header">
+            <div>
+              <p className="eyebrow">HAFTALIK PLANNING</p>
+              <h2>{weekTitle}</h2>
+            </div>
+
+            <div className="calendar-actions">
+              <button
+                className="secondary"
+                onClick={() => changeWeek(-1)}
+              >
+                ← Önceki
+              </button>
+
+              <button
+                className="secondary"
+                onClick={goToCurrentWeek}
+              >
+                Bu hafta
+              </button>
+
+              <button
+                className="secondary"
+                onClick={() => changeWeek(1)}
+              >
+                Sonraki →
+              </button>
+            </div>
+          </div>
+
+          <div className="planning-calendar">
+            <div className="calendar-row calendar-days">
+              <div className="employee-column">
+                ÇALIŞAN
+              </div>
+
+              {weekDays.map((day, index) => (
+                <div className="day-column" key={day}>
+                  <strong>{dayNames[index]}</strong>
+                  <span>{formatDate(day)}</span>
+                </div>
+              ))}
+            </div>
+
+            {!employeeNames.length ? (
+              <div className="empty">
+                Bu haftada plan bulunmuyor.
+              </div>
+            ) : (
+              employeeNames.map((employeeName) => (
+                <div
+                  className="calendar-row"
+                  key={employeeName}
+                >
+                  <div className="employee-column employee-name">
+                    {employeeName}
+                  </div>
+
+                  {weekDays.map((day) => {
+                    const dayShifts = weekShifts.filter(
+                      (s) =>
+                        s.date === day &&
+                        s.profiles?.full_name ===
+                          employeeName
+                    );
+
+                    return (
+                      <div
+                        className="day-column shift-cell"
+                        key={`${employeeName}-${day}`}
+                      >
+                        {dayShifts.map((shift) => (
+                          <div
+                            className={`shift-card ${shift.status}`}
+                            key={shift.id}
+                            title={`${employeeName} • ${shift.start_time.slice(
+                              0,
+                              5
+                            )}–${shift.end_time.slice(
+                              0,
+                              5
+                            )} • ${
+                              shift.locations?.name || '-'
+                            }`}
+                          >
+                            <strong>
+                              {shift.start_time.slice(0, 5)}–
+                              {shift.end_time.slice(0, 5)}
+                            </strong>
+
+                            <span>
+                              {shift.locations?.name || '-'}
+                            </span>
+
+                            <small>
+                              {statusText(shift.status)}
+                            </small>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
 
         <div className="card table-card">
           <div className="table-wrap">
