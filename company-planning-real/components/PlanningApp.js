@@ -950,6 +950,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
   const [requestBusy, setRequestBusy] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
   const [adminNotification, setAdminNotification] = useState('');
+  const [dashboardPeriod, setDashboardPeriod] = useState('month');
   const t = translations[language] || translations.tr;
 
   useEffect(() => {
@@ -1255,16 +1256,82 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
       );
   }
 
+  const dashboardRange = useMemo(() => {
+    const todayDate = today();
+
+    if (dashboardPeriod === 'week') {
+      const current = new Date(`${todayDate}T00:00:00`);
+      const day = current.getDay();
+      const mondayOffset = day === 0 ? -6 : 1 - day;
+
+      const start = new Date(current);
+      start.setDate(current.getDate() + mondayOffset);
+
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+
+      const toIso = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const dayNumber = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${dayNumber}`;
+      };
+
+      return {
+        start: toIso(start),
+        end: toIso(end),
+      };
+    }
+
+    if (dashboardPeriod === 'month') {
+      return {
+        start: `${todayDate.slice(0, 7)}-01`,
+        end: `${todayDate.slice(0, 7)}-31`,
+      };
+    }
+
+    return {
+      start: null,
+      end: null,
+    };
+  }, [dashboardPeriod]);
+
+  const dashboardShifts = useMemo(() => {
+    return shifts.filter((shift) => {
+      if (shift.status !== 'approved') return false;
+      if (!dashboardRange.start || !dashboardRange.end) return true;
+
+      return (
+        shift.date >= dashboardRange.start &&
+        shift.date <= dashboardRange.end
+      );
+    });
+  }, [shifts, dashboardRange]);
+
+  const dashboardTotalHours = useMemo(() => {
+    return dashboardShifts.reduce(
+      (sum, shift) =>
+        sum + duration(shift.start_time, shift.end_time),
+      0
+    );
+  }, [dashboardShifts]);
+
   const topEmployees = useMemo(() => {
     return employees
       .map((employee) => ({
         ...employee,
-        totalHours: employeeTotalHours(employee.id),
+        totalHours: dashboardShifts
+          .filter((shift) => shift.profiles?.id === employee.id)
+          .reduce(
+            (sum, shift) =>
+              sum + duration(shift.start_time, shift.end_time),
+            0
+          ),
       }))
       .filter((employee) => employee.totalHours > 0)
       .sort((a, b) => b.totalHours - a.totalHours)
       .slice(0, 5);
-  }, [employees, shifts]);
+  }, [employees, dashboardShifts]);
 
   const weekDays = useMemo(
     () => getWeekDays(weekStart),
@@ -1431,6 +1498,42 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
           >
             {t.csv}
           </button>
+        </div>
+
+        {/* DASHBOARD DÖNEMİ */}
+        <div
+          className="card"
+          style={{
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <p className="eyebrow">{t.period}</p>
+            <strong>
+              {dashboardPeriod === 'week'
+                ? t.currentWeek
+                : dashboardPeriod === 'month'
+                  ? t.currentMonth
+                  : t.allTime}
+            </strong>
+          </div>
+
+          <select
+            value={dashboardPeriod}
+            onChange={(e) =>
+              setDashboardPeriod(e.target.value)
+            }
+            style={{ maxWidth: '220px' }}
+          >
+            <option value="week">{t.currentWeek}</option>
+            <option value="month">{t.currentMonth}</option>
+            <option value="all">{t.allTime}</option>
+          </select>
         </div>
 
         {/* İSTATİSTİKLER */}
