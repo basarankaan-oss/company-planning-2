@@ -27,7 +27,11 @@ return <EmployeePanel profile={profile} onLogout={logout}/>;
 
 function AuthScreen(){
  const [mode,setMode]=useState('login'),[fullName,setFullName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
- async function submit(e){e.preventDefault();setBusy(true);setMessage('');
+ if(end <= start){
+  setMessage('Bitiş saati başlangıç saatinden sonra olmalıdır.');
+  setBusy(false);
+  return;
+}
   if(mode==='signup'){
   const {error}=await supabase.auth.signUp({
     email,
