@@ -499,6 +499,11 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
       text-align: center;
       color: #7b818a;
     }
+
+      .notification-wrap {
+        top: 72px !important;
+        right: 14px !important;
+      }
     @media (max-width: 760px) {
       .notification-panel {
         position: fixed;
