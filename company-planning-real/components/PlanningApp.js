@@ -362,6 +362,54 @@ export default function PlanningApp() {
   return <EmployeePanel profile={profile} onLogout={logout} language={language} setLanguage={setLanguage} />;
 }
 
+function CompanyBrand({ compact = false, language = 'tr' }) {
+  const t = translations[language] || translations.tr;
+
+  return (
+    <div
+      className={compact ? 'company-brand company-brand-compact' : 'company-brand'}
+      aria-label={t.companyName}
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: compact ? '2px' : '5px',
+        color: '#15233b',
+        letterSpacing: compact ? '0.16em' : '0.22em',
+        fontWeight: 800,
+        lineHeight: 1,
+      }}
+    >
+      <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '8px' : '12px' }}>
+        <span>{'SUPRA'}</span>
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'block',
+            width: compact ? '42px' : '68px',
+            height: compact ? '3px' : '4px',
+            background: '#15233b',
+            borderRadius: '999px',
+          }}
+        />
+      </span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '8px' : '12px' }}>
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'block',
+            width: compact ? '34px' : '54px',
+            height: compact ? '3px' : '4px',
+            background: '#15233b',
+            borderRadius: '999px',
+          }}
+        />
+        <span>&amp; INFRA</span>
+      </span>
+    </div>
+  );
+}
+
 function AuthScreen({ language, setLanguage }) {
   const [mode, setMode] = useState('login');
   const [fullName, setFullName] = useState('');
@@ -487,54 +535,6 @@ function AuthScreen({ language, setLanguage }) {
 
     setBusy(false);
   }
-
-function CompanyBrand({ compact = false, language = 'tr' }) {
-  const t = translations[language] || translations.tr;
-
-  return (
-    <div
-      className={compact ? 'company-brand company-brand-compact' : 'company-brand'}
-      aria-label={t.companyName}
-      style={{
-        display: 'inline-flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: compact ? '2px' : '5px',
-        color: '#15233b',
-        letterSpacing: compact ? '0.16em' : '0.22em',
-        fontWeight: 800,
-        lineHeight: 1,
-      }}
-    >
-      <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '8px' : '12px' }}>
-        <span>{'SUPRA'}</span>
-        <span
-          aria-hidden="true"
-          style={{
-            display: 'block',
-            width: compact ? '42px' : '68px',
-            height: compact ? '3px' : '4px',
-            background: '#15233b',
-            borderRadius: '999px',
-          }}
-        />
-      </span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: compact ? '8px' : '12px' }}>
-        <span
-          aria-hidden="true"
-          style={{
-            display: 'block',
-            width: compact ? '34px' : '54px',
-            height: compact ? '3px' : '4px',
-            background: '#15233b',
-            borderRadius: '999px',
-          }}
-        />
-        <span>&amp; INFRA</span>
-      </span>
-    </div>
-  );
-}
 
   return (
     <main className="auth-page" style={{ position: 'relative' }}>
@@ -1595,7 +1595,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
 
           <div className="stat">
             <span>{t.totalHours}</span>
-            <strong>{total.toFixed(1)}</strong>
+            <strong>{dashboardTotalHours.toFixed(1)}</strong>
           </div>
         </div>
 
