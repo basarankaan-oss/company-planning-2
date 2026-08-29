@@ -1377,6 +1377,11 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         }
       });
 
+  return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile.id, language]);
+
   const notificationItems = useMemo(() => {
     const items = [];
 
@@ -1441,10 +1446,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
     localStorage.setItem('supra_read_notifications', JSON.stringify(next));
   };
 
-  return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile.id, language]);
+
 
   async function updateStatus(id, status) {
     const { error } = await supabase
