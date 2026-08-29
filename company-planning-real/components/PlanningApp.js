@@ -15,14 +15,29 @@ const statusText = (s) =>
       : 'Bekliyor';
 
 const duration = (a, b) => {
+  if (!a || !b) return 0;
+
   const [ah, am] = a.split(':').map(Number);
   const [bh, bm] = b.split(':').map(Number);
 
-  let m = bh * 60 + bm - (ah * 60 + am);
+  if (
+    !Number.isFinite(ah) ||
+    !Number.isFinite(am) ||
+    !Number.isFinite(bh) ||
+    !Number.isFinite(bm)
+  ) {
+    return 0;
+  }
 
-  if (m < 0) m += 1440;
+  let startMinutes = ah * 60 + am;
+  let endMinutes = bh * 60 + bm;
 
-  return m / 60;
+  // Gece yarısını geçen vardiyalar da doğru hesaplanır.
+  if (endMinutes < startMinutes) {
+    endMinutes += 24 * 60;
+  }
+
+  return (endMinutes - startMinutes) / 60;
 };
 
 const normalizeText = (value) =>
@@ -162,23 +177,24 @@ function AuthScreen() {
     setMessage('');
 
     if (mode === 'signup') {
-const rawPhone = phone.trim();
+      const rawPhone = phone.trim();
 
-const digits = rawPhone.replace(/\D/g, '');
+      const digits = rawPhone.replace(/\D/g, '');
 
-let cleanPhone = rawPhone;
+      let cleanPhone = rawPhone;
 
-if (digits.startsWith('06') && digits.length === 10) {
-  cleanPhone = '+31' + digits.slice(1);
-} else if (digits.startsWith('316') && digits.length === 11) {
-  cleanPhone = '+' + digits;
-} else if (digits.startsWith('31') && digits.length === 11) {
-  cleanPhone = '+' + digits;
-} else if (digits.startsWith('6') && digits.length === 9) {
-  cleanPhone = '+31' + digits;
-} else if (rawPhone.startsWith('+')) {
-  cleanPhone = '+' + digits;
-}
+      if (digits.startsWith('06') && digits.length === 10) {
+        cleanPhone = '+31' + digits.slice(1);
+      } else if (digits.startsWith('316') && digits.length === 11) {
+        cleanPhone = '+' + digits;
+      } else if (digits.startsWith('31') && digits.length === 11) {
+        cleanPhone = '+' + digits;
+      } else if (digits.startsWith('6') && digits.length === 9) {
+        cleanPhone = '+31' + digits;
+      } else if (rawPhone.startsWith('+')) {
+        cleanPhone = '+' + digits;
+      }
+
       if (!cleanPhone) {
         setMessage('Lütfen telefon numaranı gir.');
         setBusy(false);
@@ -618,10 +634,12 @@ function EmployeePanel({ profile, onLogout }) {
     </main>
   );
 }
+
 function AdminPanel({ profile, onLogout }) {
   const [shifts, setShifts] = useState([]);
   const [locations, setLocations] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   const [search, setSearch] = useState('');
   const [employeeSearch, setEmployeeSearch] = useState('');
@@ -838,7 +856,8 @@ function AdminPanel({ profile, onLogout }) {
     return shifts
       .filter(
         (shift) =>
-          shift.profiles?.id === employeeId
+          shift.profiles?.id === employeeId &&
+          shift.status === 'approved'
       )
       .reduce(
         (total, shift) =>
@@ -946,15 +965,17 @@ function AdminPanel({ profile, onLogout }) {
     URL.revokeObjectURL(a.href);
   }
 
-  const total = shifts.reduce(
-    (n, s) =>
-      n +
-      duration(
-        s.start_time,
-        s.end_time
-      ),
-    0
-  );
+  const total = shifts
+    .filter((s) => s.status === 'approved')
+    .reduce(
+      (n, s) =>
+        n +
+        duration(
+          s.start_time,
+          s.end_time
+        ),
+      0
+    );
 
   const employeeCount = employees.length;
 
@@ -1064,48 +1085,40 @@ function AdminPanel({ profile, onLogout }) {
                 </thead>
 
                 <tbody>
-                  {filteredEmployees.map(
-                    (employee) => (
-                      <tr key={employee.id}>
-                        <td>
-                          <span className="badge">
-                            {employee.employee_number ||
-                              '-'}
-                          </span>
-                        </td>
+                  {filteredEmployees.map((employee) => (
+                    <tr
+                      key={employee.id}
+                      onClick={() => setSelectedEmployee(employee)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td>
+                        <span className="badge">
+                          {employee.employee_number || '-'}
+                        </span>
+                      </td>
 
-                        <td>
-                          <strong>
-                            {employee.full_name ||
-                              'Bilinmiyor'}
-                          </strong>
-                        </td>
+                      <td>
+                        <strong>
+                          {employee.full_name || 'Bilinmiyor'}
+                        </strong>
+                      </td>
 
-                        <td>
-                          {employee.email || '-'}
-                        </td>
+                      <td>{employee.email || '-'}</td>
 
-                        <td>
-                          {employee.phone || '-'}
-                        </td>
+                      <td>{employee.phone || '-'}</td>
 
-                        <td>
-                          <strong>
-                            {employeeTotalHours(
-                              employee.id
-                            ).toFixed(1)}
-                            {' saat'}
-                          </strong>
-                        </td>
-                      </tr>
-                    )
-                  )}
+                      <td>
+                        <strong>
+                          {employeeTotalHours(employee.id).toFixed(1)} saat
+                        </strong>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
         </section>
-
         {/* ÇALIŞMA TALEBİ */}
         <section
           className="card"
@@ -1130,17 +1143,13 @@ function AdminPanel({ profile, onLogout }) {
             className="form"
             onSubmit={sendShiftRequest}
           >
-
-            {/* ÇALIŞAN */}
             <label>
               Çalışan
 
               <select
                 value={requestEmployee}
                 onChange={(e) =>
-                  setRequestEmployee(
-                    e.target.value
-                  )
+                  setRequestEmployee(e.target.value)
                 }
                 required
               >
@@ -1162,7 +1171,6 @@ function AdminPanel({ profile, onLogout }) {
               </select>
             </label>
 
-            {/* TARİH */}
             <label>
               Tarih
 
@@ -1170,15 +1178,12 @@ function AdminPanel({ profile, onLogout }) {
                 type="date"
                 value={requestDate}
                 onChange={(e) =>
-                  setRequestDate(
-                    e.target.value
-                  )
+                  setRequestDate(e.target.value)
                 }
                 required
               />
             </label>
 
-            {/* SAAT */}
             <div className="two">
               <label>
                 Başlangıç
@@ -1187,9 +1192,7 @@ function AdminPanel({ profile, onLogout }) {
                   type="time"
                   value={requestStart}
                   onChange={(e) =>
-                    setRequestStart(
-                      e.target.value
-                    )
+                    setRequestStart(e.target.value)
                   }
                   required
                 />
@@ -1202,25 +1205,20 @@ function AdminPanel({ profile, onLogout }) {
                   type="time"
                   value={requestEnd}
                   onChange={(e) =>
-                    setRequestEnd(
-                      e.target.value
-                    )
+                    setRequestEnd(e.target.value)
                   }
                   required
                 />
               </label>
             </div>
 
-            {/* ŞEHİR */}
             <label>
               Şehir
 
               <select
                 value={requestLocation}
                 onChange={(e) =>
-                  setRequestLocation(
-                    e.target.value
-                  )
+                  setRequestLocation(e.target.value)
                 }
                 required
               >
@@ -1239,7 +1237,6 @@ function AdminPanel({ profile, onLogout }) {
               </select>
             </label>
 
-            {/* NOT */}
             <label>
               Not
 
@@ -1258,9 +1255,7 @@ function AdminPanel({ profile, onLogout }) {
                 placeholder="Örn. Sabah vardiyası için müsait misin?"
                 value={requestNote}
                 onChange={(e) =>
-                  setRequestNote(
-                    e.target.value
-                  )
+                  setRequestNote(e.target.value)
                 }
               />
             </label>
@@ -1475,6 +1470,7 @@ function AdminPanel({ profile, onLogout }) {
             )}
           </div>
         </section>
+
         {/* TÜM PLANLAR */}
         <div className="card table-card">
           <div className="table-wrap">
@@ -1547,7 +1543,9 @@ function AdminPanel({ profile, onLogout }) {
                     <td>
                       <button
                         className="delete"
-                        onClick={() => remove(s.id)}
+                        onClick={() =>
+                          remove(s.id)
+                        }
                       >
                         Sil
                       </button>
@@ -1565,6 +1563,255 @@ function AdminPanel({ profile, onLogout }) {
           )}
         </div>
 
+        {/* ÇALIŞAN DETAY PENCERESİ */}
+        {selectedEmployee && (
+          <div
+            onClick={() =>
+              setSelectedEmployee(null)
+            }
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+              zIndex: 1000,
+            }}
+          >
+            <div
+              className="card"
+              onClick={(e) =>
+                e.stopPropagation()
+              }
+              style={{
+                width: 'min(600px, 100%)',
+                maxHeight: '85vh',
+                overflowY: 'auto',
+                position: 'relative',
+              }}
+            >
+              <button
+                className="secondary"
+                onClick={() =>
+                  setSelectedEmployee(null)
+                }
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  right: '18px',
+                }}
+              >
+                Kapat
+              </button>
+
+              <p className="eyebrow">
+                ÇALIŞAN DETAYI
+              </p>
+
+              <h2
+                style={{
+                  fontSize: '28px',
+                  marginBottom: '6px',
+                  paddingRight: '80px',
+                }}
+              >
+                {selectedEmployee.full_name}
+              </h2>
+
+              <p className="muted">
+                {selectedEmployee.employee_number ||
+                  'EMP numarası yok'}
+              </p>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gap: '12px',
+                  marginTop: '24px',
+                }}
+              >
+                <div className="notice">
+                  <strong>📧 E-posta</strong>
+                  <br />
+                  {selectedEmployee.email || '-'}
+                </div>
+
+                <div className="notice">
+                  <strong>📱 Telefon</strong>
+                  <br />
+                  {selectedEmployee.phone || '-'}
+                </div>
+              </div>
+
+              <div
+                className="stats"
+                style={{
+                  marginTop: '18px',
+                }}
+              >
+                <div className="stat">
+                  <span>Bu hafta</span>
+                  <strong>
+                    {shifts
+                      .filter((shift) => {
+                        return (
+                          shift.profiles?.id ===
+                            selectedEmployee.id &&
+                          shift.status === 'approved' &&
+                          shift.date >= weekDays[0] &&
+                          shift.date <= weekDays[6]
+                        );
+                      })
+                      .reduce(
+                        (total, shift) =>
+                          total +
+                          duration(
+                            shift.start_time,
+                            shift.end_time
+                          ),
+                        0
+                      )
+                      .toFixed(1)}
+                    h
+                  </strong>
+                </div>
+
+                <div className="stat">
+                  <span>Bu ay</span>
+                  <strong>
+                    {shifts
+                      .filter((shift) => {
+                        if (
+                          shift.profiles?.id !==
+                          selectedEmployee.id
+                        ) {
+                          return false;
+                        }
+
+                        if (shift.status !== 'approved') {
+                          return false;
+                        }
+
+                        return shift.date.startsWith(
+                          today().slice(0, 7)
+                        );
+                      })
+                      .reduce(
+                        (total, shift) =>
+                          total +
+                          duration(
+                            shift.start_time,
+                            shift.end_time
+                          ),
+                        0
+                      )
+                      .toFixed(1)}
+                    h
+                  </strong>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: '28px',
+                }}
+              >
+                <p className="eyebrow">
+                  YAKLAŞAN VARDİYALAR
+                </p>
+
+                <h2
+                  style={{
+                    marginTop: '6px',
+                  }}
+                >
+                  Planlanan çalışmalar
+                </h2>
+
+                {shifts.filter(
+                  (shift) =>
+                    shift.profiles?.id ===
+                      selectedEmployee.id &&
+                    shift.date >= today()
+                ).length === 0 ? (
+                  <div className="empty">
+                    Yaklaşan vardiya bulunmuyor.
+                  </div>
+                ) : (
+                  <div className="mini-list">
+                    {shifts
+                      .filter(
+                        (shift) =>
+                          shift.profiles?.id ===
+                            selectedEmployee.id &&
+                          shift.date >= today()
+                      )
+                      .sort((a, b) => {
+                        const first =
+                          `${a.date} ${a.start_time}`;
+
+                        const second =
+                          `${b.date} ${b.start_time}`;
+
+                        return first.localeCompare(
+                          second
+                        );
+                      })
+                      .slice(0, 10)
+                      .map((shift) => (
+                        <div
+                          className="mini-row"
+                          key={shift.id}
+                        >
+                          <div>
+                            <strong>
+                              {shift.date}
+                            </strong>
+
+                            <span>
+                              {shift.start_time.slice(
+                                0,
+                                5
+                              )}{' '}
+                              –{' '}
+                              {shift.end_time.slice(
+                                0,
+                                5
+                              )}
+                            </span>
+
+                            <span>
+                              {shift.locations?.name ||
+                                '-'}
+                            </span>
+                          </div>
+
+                          <em
+                            className={
+                              shift.status ===
+                              'approved'
+                                ? 'approved'
+                                : shift.status ===
+                                  'rejected'
+                                ? 'rejected'
+                                : 'pending'
+                            }
+                          >
+                            {statusText(
+                              shift.status
+                            )}
+                          </em>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* ADMIN PANEL KAPANIŞI */}
       </div>
     </main>
   );
