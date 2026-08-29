@@ -299,80 +299,91 @@ function Header({ name, employeeNumber, role, onLogout }) {
 }
 
 function EmployeePanel({ profile, onLogout }) {
-  const [date, setDate] = useState(today());
-  const [start, setStart] = useState('09:00');
-  const [end, setEnd] = useState('17:00');
-  const [locationId, setLocationId] = useState('');
-  const [locations, setLocations] = useState([]);
-  const [shifts, setShifts] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
   const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
 
-  async function load() {
-    const [{ data: locs }, { data: ss, error }] = await Promise.all([
-      supabase
-        .from('locations')
-        .select('id,name')
-        .order('name'),
+  async function loadRequests() {
+    setLoadingRequests(true);
 
-      supabase
-        .from('shifts')
-        .select(
-          'id,date,start_time,end_time,status,locations(name)'
-        )
-        .eq('employee_id', profile.id)
-        .order('date', { ascending: false })
-        .limit(20),
-    ]);
+    const { data, error } = await supabase
+      .from('shift_requests')
+      .select(
+        'id,date,start_time,end_time,note,status,created_at,locations(name),profiles!shift_requests_admin_id_fkey(full_name)'
+      )
+      .eq('employee_id', profile.id)
+      .order('date', { ascending: true })
+      .order('start_time', { ascending: true });
 
     if (error) {
       console.error(error);
+      setMessage(error.message);
+    } else {
+      setRequests(data || []);
     }
 
-    setLocations(locs || []);
-    setShifts(ss || []);
-
-    if (!locationId && locs?.[0]) {
-      setLocationId(locs[0].id);
-    }
+    setLoadingRequests(false);
   }
 
   useEffect(() => {
-    load();
+    loadRequests();
   }, []);
 
-  async function submit(e) {
-    e.preventDefault();
-
-    setBusy(true);
+  async function respondToRequest(request, status) {
     setMessage('');
 
-    if (end <= start) {
-      setMessage(
-        'Bitiş saati başlangıç saatinden sonra olmalıdır.'
-      );
-      setBusy(false);
+    const { error: updateError } = await supabase
+      .from('shift_requests')
+      .update({
+        status,
+        responded_at: new Date().toISOString(),
+      })
+      .eq('id', request.id)
+      .eq('employee_id', profile.id);
+
+    if (updateError) {
+      setMessage(updateError.message);
       return;
     }
 
-    const { error } = await supabase
-      .from('shifts')
-      .insert({
-        employee_id: profile.id,
-        date,
-        start_time: start,
-        end_time: end,
-        location_id: locationId,
-      });
+    if (status === 'accepted') {
+      const { error: shiftError } = await supabase
+        .from('shifts')
+        .insert({
+          employee_id: profile.id,
+          date: request.date,
+          start_time: request.start_time,
+          end_time: request.end_time,
+          location_id: request.location_id,
+          status: 'approved',
+        });
 
-    if (error) {
-      setMessage(error.message);
+      if (shiftError) {
+        console.error(shiftError);
+
+        setMessage(
+          'Talep kabul edildi ancak plan oluşturulurken bir hata oluştu: ' +
+            shiftError.message
+        );
+
+        await loadRequests();
+        return;
+      }
+
+      setMessage(
+        '✓ Çalışabileceğin onaylandı ve planın takvime eklendi.'
+      );
     } else {
-      setMessage('✓ Plan başarıyla gönderildi.');
-      await load();
+      setMessage('Talep reddedildi.');
     }
 
-    setBusy(false);
+    await loadRequests();
+  }
+
+  function requestStatusText(status) {
+    if (status === 'accepted') return 'Çalışabilirim';
+    if (status === 'rejected') return 'Çalışamam';
+    return 'Cevap bekleniyor';
   }
 
   return (
@@ -388,114 +399,131 @@ function EmployeePanel({ profile, onLogout }) {
         <div className="hero">
           <p className="eyebrow">ÇALIŞAN PANELİ</p>
 
-          <h1>Çalışma planını gönder.</h1>
+          <h1>Çalışma taleplerin.</h1>
 
           <p className="muted">
-            Tarih, saat ve çalışma yerini gir.
+            Yöneticinin gönderdiği çalışma taleplerini buradan
+            görüntüleyip cevaplayabilirsin.
           </p>
         </div>
 
-        <div className="grid-two">
-          <section className="card">
-            <h2>Yeni plan</h2>
+        {message && (
+          <div className="notice" style={{ marginBottom: '18px' }}>
+            {message}
+          </div>
+        )}
 
-            <form className="form" onSubmit={submit}>
-              <label>
-                Tarih
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-              </label>
+        <section className="card">
+          <h2>Çalışma Taleplerim</h2>
 
-              <div className="two">
-                <label>
-                  Başlangıç
-                  <input
-                    type="time"
-                    value={start}
-                    onChange={(e) => setStart(e.target.value)}
-                    required
-                  />
-                </label>
-
-                <label>
-                  Bitiş
-                  <input
-                    type="time"
-                    value={end}
-                    onChange={(e) => setEnd(e.target.value)}
-                    required
-                  />
-                </label>
-              </div>
-
-              <label>
-                Yer
-                <select
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                  required
+          {loadingRequests ? (
+            <p className="muted">Talepler yükleniyor...</p>
+          ) : !requests.length ? (
+            <p className="muted">
+              Şu anda bekleyen veya geçmiş bir çalışma talebin yok.
+            </p>
+          ) : (
+            <div className="mini-list">
+              {requests.map((request) => (
+                <div
+                  className="mini-row"
+                  key={request.id}
+                  style={{
+                    alignItems: 'center',
+                    gap: '24px',
+                  }}
                 >
-                  <option value="">Yer seçin</option>
+                  <div>
+                    <strong>{request.date}</strong>
 
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                    <span>
+                      {request.start_time.slice(0, 5)} –{' '}
+                      {request.end_time.slice(0, 5)}
+                    </span>
 
-              <button className="primary" disabled={busy}>
-                {busy ? 'Gönderiliyor...' : 'PLAN GÖNDER →'}
-              </button>
+                    <span>
+                      📍 {request.locations?.name || '-'}
+                    </span>
 
-              {message && (
-                <div className="notice">{message}</div>
-              )}
-            </form>
-          </section>
-
-          <section className="card">
-            <h2>Son planlarım</h2>
-
-            {!shifts.length ? (
-              <p className="muted">
-                Henüz plan gönderilmedi.
-              </p>
-            ) : (
-              <div className="mini-list">
-                {shifts.map((s) => (
-                  <div className="mini-row" key={s.id}>
-                    <div>
-                      <strong>{s.date}</strong>
-                      <span>{s.locations?.name || '-'}</span>
-                    </div>
-
-                    <div>
+                    {request.note && (
                       <span>
-                        {s.start_time.slice(0, 5)} –{' '}
-                        {s.end_time.slice(0, 5)}
+                        📝 {request.note}
                       </span>
-
-                      <em className={s.status}>
-                        {statusText(s.status)}
-                      </em>
-                    </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
+
+                  <div
+                    style={{
+                      minWidth: '190px',
+                      textAlign: 'right',
+                    }}
+                  >
+                    <em
+                      className={
+                        request.status === 'accepted'
+                          ? 'approved'
+                          : request.status === 'rejected'
+                            ? 'rejected'
+                            : 'pending'
+                      }
+                      style={{
+                        display: 'block',
+                        marginBottom:
+                          request.status === 'pending'
+                            ? '10px'
+                            : '0',
+                      }}
+                    >
+                      {requestStatusText(request.status)}
+                    </em>
+
+                    {request.status === 'pending' && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          gap: '8px',
+                        }}
+                      >
+                        <button
+                          className="secondary"
+                          onClick={() =>
+                            respondToRequest(
+                              request,
+                              'rejected'
+                            )
+                          }
+                        >
+                          Çalışamam
+                        </button>
+
+                        <button
+                          className="primary"
+                          style={{
+                            height: '38px',
+                            padding: '0 12px',
+                          }}
+                          onClick={() =>
+                            respondToRequest(
+                              request,
+                              'accepted'
+                            )
+                          }
+                        >
+                          Çalışabilirim
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
 }
-
 function AdminPanel({ profile, onLogout }) {
   const [shifts, setShifts] = useState([]);
   const [locations, setLocations] = useState([]);
