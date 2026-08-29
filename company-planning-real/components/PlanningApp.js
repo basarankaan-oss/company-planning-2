@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '../lib/supabase';
 
 const supabase = createClient();
@@ -1354,83 +1354,38 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
   async function respondToRequest(request, status) {
     setMessage('');
 
-    const { error: updateError } = await supabase
+    // DB trigger, talep accepted olduğunda shifts kaydını otomatik ve atomik
+    // olarak oluşturur. Böylece client'ın shifts INSERT RLS iznine ihtiyacı yoktur.
+    const { error } = await supabase
       .from('shift_requests')
       .update({
         status,
         responded_at: new Date().toISOString(),
       })
       .eq('id', request.id)
-      .eq('employee_id', profile.id);
+      .eq('employee_id', profile.id)
+      .eq('status', 'pending');
 
-    if (updateError) {
-      setMessage(updateError.message);
+    if (error) {
+      console.error(error);
+      setMessage(
+        status === 'accepted'
+          ? 'Talep kabul edilemedi: ' + error.message
+          : error.message
+      );
+      await loadRequests();
       return;
     }
 
-    if (status === 'accepted') {
-      // Aynı talebin ikinci kez kabul edilmesi halinde çift vardiya oluşmasını engelle.
-      const { data: existingShift, error: existingShiftError } = await supabase
-        .from('shifts')
-        .select('id')
-        .eq('employee_id', profile.id)
-        .eq('date', request.date)
-        .eq('start_time', request.start_time)
-        .eq('end_time', request.end_time)
-        .eq('location_id', request.location_id)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingShiftError) {
-        console.error(existingShiftError);
-        setMessage('Talep kabul edildi ancak mevcut plan kontrol edilemedi: ' + existingShiftError.message);
-        await loadRequests();
-        return;
-      }
-
-      let createdShiftId = existingShift?.id || null;
-
-      if (!createdShiftId) {
-        const { data: createdShift, error: shiftError } = await supabase
-          .from('shifts')
-          .insert({
-            employee_id: profile.id,
-            date: request.date,
-            start_time: request.start_time,
-            end_time: request.end_time,
-            location_id: request.location_id,
-            status: 'approved',
-          })
-          .select('id')
-          .single();
-
-        if (shiftError) {
-          console.error(shiftError);
-          setMessage(
-            'Talep kabul edildi ancak plan oluşturulurken bir hata oluştu: ' +
-              shiftError.message
-          );
-          await loadRequests();
-          return;
-        }
-
-        createdShiftId = createdShift?.id || null;
-      }
-
-      // INSERT gerçekten oluştu mu diye doğrula.
-      if (!createdShiftId) {
-        setMessage('Talep kabul edildi ancak plan kaydı doğrulanamadı.');
-        await loadRequests();
-        return;
-      }
-
-      setMessage('✓ Çalışabileceğin onaylandı ve planın takvime eklendi.');
-    } else {
-      setMessage('Talep reddedildi.');
-    }
+    setMessage(
+      status === 'accepted'
+        ? '✓ Çalışabileceğin onaylandı ve planın takvime eklendi.'
+        : 'Talep reddedildi.'
+    );
 
     await loadRequests();
   }
+
 
   function requestStatusText(status) {
     if (status === 'accepted') return t.accepted;
@@ -1645,6 +1600,8 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
   const [requestMessage, setRequestMessage] = useState('');
   const [adminNotification, setAdminNotification] = useState('');
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [responseNotifications, setResponseNotifications] = useState([]);
+  const knownResponseIdsRef = useRef(new Set());
   const [readNotificationIds, setReadNotificationIds] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('supra_read_notifications') || '[]');
@@ -1708,8 +1665,76 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
   }, []);
 
   useEffect(() => {
-    const refreshTimers = [];
+    let mounted = true;
+    let initialized = false;
 
+    async function loadResponses() {
+      const { data, error } = await supabase
+        .from('shift_requests')
+        .select(
+          'id,employee_id,status,responded_at,date,start_time,end_time,locations(name)'
+        )
+        .eq('admin_id', profile.id)
+        .in('status', ['accepted', 'rejected'])
+        .not('responded_at', 'is', null)
+        .order('responded_at', { ascending: false })
+        .limit(30);
+
+      if (error) {
+        console.error('Admin response notification query error:', error);
+        return;
+      }
+
+      if (!mounted) return;
+
+      const rows = data || [];
+      const ids = new Set(rows.map((row) => row.id));
+
+      const responseItems = rows.map((row) => ({
+        id: `request-response-${row.id}`,
+        type: row.status === 'accepted' ? 'success' : 'error',
+        title: row.status === 'accepted' ? 'Çalışan talebi kabul etti' : 'Çalışan talebi reddetti',
+        message: `${employees.find((employee) => employee.id === row.employee_id)?.full_name || t.employee} • ${row.date} • ${row.start_time?.slice(0, 5) || '--:--'} – ${row.end_time?.slice(0, 5) || '--:--'} • ${row.locations?.name || '-'}`,
+        createdAt: row.responded_at || new Date().toISOString(),
+      }));
+
+      if (!initialized) {
+        // Admin sayfası response'tan sonra açılmış olsa bile son cevaplar
+        // bildirim panelinde görünür.
+        setResponseNotifications(responseItems.slice(0, 20));
+      } else {
+        const newlyResponded = rows.filter((row) => !knownResponseIdsRef.current.has(row.id));
+        if (newlyResponded.length) {
+          const newest = newlyResponded[0];
+          const employeeName = employees.find((employee) => employee.id === newest.employee_id)?.full_name || t.employee;
+          const accepted = newest.status === 'accepted';
+          setAdminNotification(
+            accepted
+              ? `✓ ${employeeName} çalışma talebini kabul etti.`
+              : `✕ ${employeeName} çalışma talebini reddetti.`
+          );
+          setResponseNotifications((current) => [
+            ...newlyResponded.map((row) => ({
+              id: `request-response-${row.id}`,
+              type: row.status === 'accepted' ? 'success' : 'error',
+              title: row.status === 'accepted' ? 'Çalışan talebi kabul etti' : 'Çalışan talebi reddetti',
+              message: `${employees.find((employee) => employee.id === row.employee_id)?.full_name || t.employee} • ${row.date} • ${row.start_time?.slice(0, 5) || '--:--'} – ${row.end_time?.slice(0, 5) || '--:--'} • ${row.locations?.name || '-'}`,
+              createdAt: row.responded_at || new Date().toISOString(),
+            })),
+            ...current,
+          ].slice(0, 20));
+          await load();
+        }
+      }
+
+      knownResponseIdsRef.current = ids;
+      initialized = true;
+    }
+
+    loadResponses();
+    const interval = window.setInterval(loadResponses, 3000);
+
+    // Realtime açıksa anında yenile; polling ise bağlantı/RLS sorunlarında fallback olur.
     const channel = supabase
       .channel(`admin-request-notifications-${profile.id}`)
       .on(
@@ -1718,32 +1743,22 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
           event: 'UPDATE',
           schema: 'public',
           table: 'shift_requests',
+          filter: `admin_id=eq.${profile.id}`,
         },
-        (payload) => {
-          if (payload.new?.admin_id !== profile.id) return;
-
-          setAdminNotification(t.requestResponseNotification);
-
-          // Çalışan önce request'i UPDATE edip hemen ardından shift INSERT ediyor.
-          // Realtime UPDATE admin'e INSERT'ten önce ulaşabildiği için iki gecikmeli
-          // yenileme ile yarış durumunu ortadan kaldırıyoruz.
-          load();
-
-          refreshTimers.push(window.setTimeout(() => load(), 700));
-          refreshTimers.push(window.setTimeout(() => load(), 1600));
-        }
+        () => loadResponses()
       )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
-          console.error('Admin notification channel error');
+          console.error('Admin notification realtime channel error; polling remains active.');
         }
       });
 
     return () => {
-      refreshTimers.forEach((timer) => window.clearTimeout(timer));
+      mounted = false;
+      window.clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [profile.id, language]);
+  }, [profile.id, language, employees]);
 
 
   const notificationItems = useMemo(() => {
@@ -1759,6 +1774,8 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         createdAt: new Date().toISOString(),
       });
     }
+
+    responseNotifications.forEach((item) => items.push(item));
 
     // Build notifications from recent shift/request records when available.
     shifts
@@ -1790,7 +1807,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
       });
 
     return items.slice(0, 15);
-  }, [adminNotification, shifts]);
+  }, [adminNotification, responseNotifications, shifts]);
 
   const unreadNotificationCount = notificationItems.filter(
     (item) => !readNotificationIds.includes(item.id)
@@ -1942,14 +1959,22 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
       status: 'pending',
     }));
 
-    const { error } = await supabase
+    const { data: insertedRequests, error } = await supabase
       .from('shift_requests')
-      .insert(rows);
+      .insert(rows)
+      .select('id');
 
     if (error) {
       console.error(error);
       setRequestMessage(error.message);
     } else {
+      // Gönderilen request'lerin gerçekten oluştuğunu client tarafında da doğrula.
+      if (!insertedRequests?.length || insertedRequests.length !== rows.length) {
+        setRequestMessage('Talep gönderimi doğrulanamadı. Lütfen tekrar deneyin.');
+        setRequestBusy(false);
+        return;
+      }
+
       setRequestMessage(
         requestEmployees.length === 1
           ? t.requestSent
