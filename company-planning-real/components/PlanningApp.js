@@ -384,6 +384,124 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
     .topbar .user strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
     .auth-page { padding: 28px 20px; }
     .auth-card { width: min(100%, 460px); }
+    .planning-calendar {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid #e8ebef;
+      border-radius: 16px;
+      background: #fff;
+    }
+    .planning-calendar .calendar-row {
+      display: grid;
+      grid-template-columns: 180px repeat(7, minmax(125px, 1fr));
+      min-width: 1055px;
+    }
+    .planning-calendar .calendar-days {
+      background: #f7f8fa;
+      border-bottom: 1px solid #e8ebef;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .planning-calendar .employee-column,
+    .planning-calendar .day-column {
+      padding: 14px 12px;
+      border-right: 1px solid #eef0f3;
+      min-width: 0;
+    }
+    .planning-calendar .employee-column:last-child,
+    .planning-calendar .day-column:last-child {
+      border-right: 0;
+    }
+    .planning-calendar .day-column {
+      min-height: 72px;
+    }
+    .planning-calendar .calendar-row:not(.calendar-days) {
+      border-bottom: 1px solid #eef0f3;
+    }
+    .planning-calendar .calendar-row:last-child {
+      border-bottom: 0;
+    }
+    .planning-calendar .employee-name {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      background: #fafbfc;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+    }
+    .planning-calendar .employee-name span {
+      color: #7b818a;
+      font-size: 12px;
+    }
+    .planning-calendar .shift-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: #fff;
+    }
+    .planning-calendar .shift-card {
+      border: 1px solid #dfe4ea;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .planning-calendar .shift-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(21,35,59,.10);
+    }
+    .planning-calendar .shift-card strong {
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .planning-calendar .shift-card span,
+    .planning-calendar .shift-card small {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .planning-calendar .shift-card small {
+      opacity: .72;
+      font-size: 11px;
+    }
+    @media (max-width: 760px) {
+      .calendar-header {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+      }
+      .calendar-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr;
+        width: 100%;
+        gap: 8px !important;
+      }
+      .calendar-actions button {
+        width: 100%;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        font-size: 12px;
+      }
+      .planning-calendar {
+        border-radius: 14px;
+      }
+      .planning-calendar .calendar-row {
+        grid-template-columns: 145px repeat(7, minmax(115px, 1fr));
+        min-width: 950px;
+      }
+      .planning-calendar .employee-column,
+      .planning-calendar .day-column {
+        padding: 11px 9px;
+      }
+      .planning-calendar .shift-card {
+        padding: 8px;
+      }
+    }
     input, select, button { min-height: 44px; }
 
     @media (max-width: 760px) {
@@ -407,220 +525,6 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
       .topbar .user button { padding-left: 12px !important; padding-right: 12px !important; }
       .dashboard-content { width: calc(100% - 16px); }
       .card { padding: 16px !important; }
-    }
-
-    /* =========================
-       MOBILE UI — SUPRA & INFRA
-       ========================= */
-    @media (max-width: 760px) {
-      .page {
-        min-height: 100dvh;
-        padding-bottom: 72px;
-      }
-
-      .content {
-        padding-top: 8px;
-      }
-
-      .admin-head {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch !important;
-        gap: 16px;
-      }
-
-      .admin-head > button,
-      .toolbar > button,
-      .toolbar .secondary,
-      .calendar-actions button {
-        width: 100%;
-      }
-
-      .toolbar {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
-      }
-
-      .toolbar input,
-      .toolbar select {
-        width: 100%;
-      }
-
-      .calendar-header {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 12px !important;
-      }
-
-      .calendar-actions {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 8px !important;
-      }
-
-      /* Takvimi telefonda sıkıştırmak yerine yatay kaydır. */
-      .planning-calendar {
-        width: 100%;
-        overflow-x: auto;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 8px;
-      }
-
-      .planning-calendar .calendar-row {
-        min-width: 760px;
-      }
-
-      .planning-calendar .employee-column {
-        min-width: 150px;
-        max-width: 150px;
-      }
-
-      .planning-calendar .day-column {
-        min-width: 86px;
-      }
-
-      .shift-card {
-        padding: 9px !important;
-        border-radius: 10px !important;
-      }
-
-      .shift-card strong {
-        font-size: 12px;
-      }
-
-      .shift-card span,
-      .shift-card small {
-        font-size: 10px;
-      }
-
-      /* Çalışan talepleri telefonda iki sütun yerine kart düzeni. */
-      .mini-row {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 12px !important;
-        padding: 14px !important;
-      }
-
-      .mini-row > div:last-child {
-        width: 100%;
-        align-items: stretch !important;
-      }
-
-      .mini-row > div:last-child button {
-        flex: 1;
-        min-width: 0;
-      }
-
-      /* İstatistikler tek sütun. */
-      .stats {
-        grid-template-columns: 1fr !important;
-      }
-
-      .stat {
-        padding: 16px !important;
-      }
-
-      /* Tablolar ekrana taşmasın; yatay kaydırılabilsin. */
-      .table-card {
-        overflow: hidden;
-      }
-
-      .table-wrap {
-        width: 100%;
-        overflow-x: auto;
-        border-radius: 12px;
-      }
-
-      .table-wrap table {
-        min-width: 700px;
-      }
-
-      /* Çalışan detay penceresi mobilde tam ekran hissi versin. */
-      .card[style*="maxHeight"] {
-        width: calc(100vw - 24px) !important;
-        max-height: calc(100dvh - 24px) !important;
-        margin: 12px;
-      }
-
-      /* Tarih/saat/lokasyon gibi form alanları daha rahat dokunulsun. */
-      input,
-      select,
-      button {
-        min-height: 46px;
-        font-size: 15px;
-      }
-
-      .primary,
-      .secondary {
-        min-height: 46px;
-      }
-
-      /* Uzun isim ve personel numarası taşmasın. */
-      .employee-name,
-      .topbar .user {
-        min-width: 0;
-      }
-
-      .employee-name strong {
-        overflow-wrap: anywhere;
-      }
-
-      /* Bildirimler telefonda okunabilir olsun. */
-      .notice {
-        word-break: break-word;
-      }
-
-      /* Auth ekranı */
-      .auth-page {
-        min-height: 100dvh;
-        width: 100%;
-      }
-
-      .auth-card {
-        width: 100%;
-        max-width: 460px;
-      }
-
-      .company-brand {
-        max-width: 100%;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .topbar {
-        align-items: flex-start !important;
-      }
-
-      .topbar .company-brand-compact {
-        max-width: 48vw;
-        overflow: hidden;
-      }
-
-      .topbar .user {
-        flex-wrap: wrap;
-      }
-
-      .topbar .user > span {
-        flex: 1 1 160px;
-      }
-
-      .topbar .user button {
-        flex: 0 0 auto;
-      }
-
-      .calendar-actions {
-        grid-template-columns: 1fr !important;
-      }
-
-      .calendar-actions button {
-        width: 100%;
-      }
-
-      h1 {
-        line-height: 1.05;
-      }
     }
   `;
 
@@ -2326,6 +2230,15 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
                               <div
                                 className={`shift-card ${shift.status}`}
                                 key={shift.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setSelectedEmployee(employee)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setSelectedEmployee(employee);
+                                  }
+                                }}
                                 title={`${employee.full_name} • ${shift.start_time.slice(
                                   0,
                                   5
@@ -2353,6 +2266,13 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
                                   {shift.locations?.name ||
                                     '-'}
                                 </span>
+
+                                <small>
+                                  {duration(
+                                    shift.start_time,
+                                    shift.end_time
+                                  ).toFixed(1)} {t.hour}
+                                </small>
 
                                 <small>
                                   {statusText(
