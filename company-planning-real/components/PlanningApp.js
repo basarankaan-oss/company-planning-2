@@ -66,6 +66,14 @@ const translations = {
     newRequestNotification: 'Yeni çalışma talebin var.',
     pendingRequests: 'Bekleyen talepler',
     requestResponseNotification: 'Bir çalışma talebine cevap geldi.',
+    profile: 'Profilim',
+    settings: 'Ayarlar',
+    notificationsCenter: 'Bildirimler',
+    noNotifications: 'Henüz bildirim yok.',
+    markRead: 'Okundu olarak işaretle',
+    account: 'Hesap',
+    roleLabel: 'Rol',
+    todayLabel: 'Bugün',
   },
   nl: {
     loading: 'Laden...', profileLoading: 'Profiel laden...', login: 'INLOGGEN', signup: 'NIEUW ACCOUNT',
@@ -110,6 +118,14 @@ const translations = {
     newRequestNotification: 'Je hebt een nieuw werkverzoek.',
     pendingRequests: 'Openstaande verzoeken',
     requestResponseNotification: 'Er is een antwoord op een werkverzoek ontvangen.',
+    profile: 'Mijn profiel',
+    settings: 'Instellingen',
+    notificationsCenter: 'Meldingen',
+    noNotifications: 'Nog geen meldingen.',
+    markRead: 'Markeer als gelezen',
+    account: 'Account',
+    roleLabel: 'Rol',
+    todayLabel: 'Vandaag',
   },
   en: {
     loading: 'Loading...', profileLoading: 'Loading profile...', login: 'LOGIN', signup: 'NEW ACCOUNT',
@@ -151,6 +167,14 @@ const translations = {
     newRequestNotification: 'You have a new work request.',
     pendingRequests: 'Pending requests',
     requestResponseNotification: 'A work request has received a response.',
+    profile: 'My profile',
+    settings: 'Settings',
+    notificationsCenter: 'Notifications',
+    noNotifications: 'No notifications yet.',
+    markRead: 'Mark as read',
+    account: 'Account',
+    roleLabel: 'Role',
+    todayLabel: 'Today',
   },
 };
 
@@ -344,77 +368,388 @@ export default function PlanningApp() {
   }
 
   if (loading) {
-    return <div className="loading">{translations[language].loading}</div>;
+    return (
+      <>
+        <GlobalUIStyles />
+        <div className="loading">{translations[language].loading}</div>
+      </>
+    );
   }
 
   if (!session) {
-    return <AuthScreen language={language} setLanguage={setLanguage} />;
+    return (
+      <>
+        <GlobalUIStyles />
+        <AuthScreen language={language} setLanguage={setLanguage} />
+      </>
+    );
   }
 
   if (!profile) {
-    return <div className="loading">{translations[language].profileLoading}</div>;
+    return (
+      <>
+        <GlobalUIStyles />
+        <div className="loading">{translations[language].profileLoading}</div>
+      </>
+    );
   }
 
   if (profile.role === 'admin') {
-    return <AdminPanel profile={profile} onLogout={logout} language={language} setLanguage={setLanguage} />;
+    return (
+      <>
+        <GlobalUIStyles />
+        <AdminPanel profile={profile} onLogout={logout} language={language} setLanguage={setLanguage} />
+      </>
+    );
   }
 
-  return <EmployeePanel profile={profile} onLogout={logout} language={language} setLanguage={setLanguage} />;
+  return (
+    <>
+      <GlobalUIStyles />
+      <EmployeePanel profile={profile} onLogout={logout} language={language} setLanguage={setLanguage} />
+    </>
+  );
+}
+
+
+function GlobalUIStyles() {
+  return (
+    <style>{`
+      :root {
+        --brand-ink: #15233b;
+        --brand-accent: #f28c28;
+        --surface: #ffffff;
+        --surface-soft: #f7f8fa;
+        --border-soft: #e7e9ee;
+        --text-main: #15233b;
+        --text-muted: #737b88;
+        --shadow-soft: 0 12px 32px rgba(21,35,59,.07);
+        --shadow-hover: 0 18px 42px rgba(21,35,59,.11);
+      }
+
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body { margin: 0; background: #f5f6f8; color: var(--text-main); }
+
+      button, input, select, textarea { font: inherit; }
+      button { -webkit-tap-highlight-color: transparent; }
+
+      .auth-page {
+        min-height: 100svh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 28px 18px 84px;
+        background:
+          radial-gradient(circle at 15% 15%, rgba(242,140,40,.10), transparent 28%),
+          radial-gradient(circle at 85% 85%, rgba(21,35,59,.07), transparent 30%),
+          #f5f6f8;
+      }
+
+      .auth-card {
+        width: min(460px, 100%);
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--border-soft);
+        border-radius: 24px;
+        padding: 34px;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .topbar {
+        min-height: 76px;
+        padding: 14px clamp(16px, 3vw, 34px);
+        background: rgba(255,255,255,.96);
+        border-bottom: 1px solid var(--border-soft);
+        box-shadow: 0 4px 18px rgba(21,35,59,.04);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        position: sticky !important;
+        top: 0;
+        z-index: 1000;
+        backdrop-filter: blur(14px);
+      }
+
+      .topbar .user {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .topbar .user > span {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 3px;
+      }
+
+      .topbar .user small { color: var(--text-muted); }
+
+      .topbar .user > button,
+      .profile-menu-button {
+        border: 1px solid var(--border-soft);
+        background: #fff;
+        color: var(--brand-ink);
+        border-radius: 12px;
+        padding: 9px 12px;
+        cursor: pointer;
+        transition: .18s ease;
+      }
+
+      .topbar .user > button:hover,
+      .profile-menu-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 7px 18px rgba(21,35,59,.08);
+      }
+
+      .dashboard-shell, main.dashboard-shell {
+        min-height: calc(100svh - 76px);
+      }
+
+      .content {
+        width: min(1380px, calc(100% - 36px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .hero, .card, .stats > * {
+        border-color: var(--border-soft) !important;
+      }
+
+      .card, .hero {
+        box-shadow: var(--shadow-soft);
+        transition: box-shadow .2s ease, transform .2s ease;
+      }
+
+      .card:hover {
+        box-shadow: var(--shadow-hover);
+      }
+
+      .stats {
+        gap: 16px !important;
+      }
+
+      .stats > * {
+        min-width: 0;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 14px;
+      }
+
+      table {
+        min-width: 680px;
+      }
+
+      tbody tr[style*="cursor"] {
+        transition: background .15s ease;
+      }
+
+      tbody tr[style*="cursor"]:hover {
+        background: #f8fafc;
+      }
+
+      .week-calendar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .week-calendar table {
+        min-width: 760px;
+      }
+
+      .mobile-card {
+        display: none;
+      }
+
+      .profile-wrap {
+        position: relative;
+      }
+
+      .profile-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--brand-ink);
+        color: #fff;
+        font-weight: 800;
+        flex: 0 0 auto;
+      }
+
+      .notification-wrap, .profile-wrap { position: relative; }
+
+      .icon-button {
+        width: 42px;
+        height: 42px;
+        border: 1px solid var(--border-soft);
+        background: #fff;
+        border-radius: 12px;
+        cursor: pointer;
+        position: relative;
+        transition: .18s ease;
+      }
+
+      .icon-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 7px 18px rgba(21,35,59,.08);
+      }
+
+      .notification-dot {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 99px;
+        background: var(--brand-accent);
+        color: #fff;
+        font-size: 10px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        border: 2px solid #fff;
+      }
+
+      .floating-panel {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 10px);
+        width: min(360px, calc(100vw - 28px));
+        background: #fff;
+        border: 1px solid var(--border-soft);
+        border-radius: 16px;
+        box-shadow: 0 18px 50px rgba(21,35,59,.16);
+        padding: 14px;
+        z-index: 1400;
+      }
+
+      .floating-panel h3 {
+        margin: 0 0 10px;
+      }
+
+      .notification-item {
+        padding: 11px 10px;
+        border-radius: 12px;
+        background: #f8f9fb;
+        margin-top: 8px;
+      }
+
+      .notification-item small {
+        display: block;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      .profile-panel-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 4px 14px;
+        border-bottom: 1px solid var(--border-soft);
+        margin-bottom: 8px;
+      }
+
+      @media (max-width: 760px) {
+        .auth-page { padding: 18px 12px 80px; align-items: flex-start; }
+        .auth-card {
+          margin-top: 8vh;
+          padding: 24px 18px;
+          border-radius: 20px;
+        }
+
+        .topbar {
+          min-height: 68px;
+          padding: 11px 12px;
+          flex-wrap: wrap;
+        }
+
+        .topbar .user {
+          width: 100%;
+          justify-content: flex-end;
+          margin-left: auto;
+        }
+
+        .topbar .user > span { display: none; }
+
+        .content {
+          width: min(100% - 20px, 680px);
+          padding: 16px 0 90px;
+        }
+
+        .stats {
+          grid-template-columns: 1fr !important;
+        }
+
+        .two {
+          grid-template-columns: 1fr !important;
+        }
+
+        .card, .hero {
+          border-radius: 16px !important;
+          padding: 16px !important;
+        }
+
+        .form button.primary,
+        .form button.secondary,
+        button.primary,
+        button.secondary {
+          min-height: 46px;
+        }
+
+        .mobile-card {
+          display: block;
+        }
+
+        .desktop-table {
+          overflow-x: auto;
+        }
+
+        .week-calendar table {
+          min-width: 700px;
+        }
+
+        .floating-panel {
+          right: -8px;
+        }
+      }
+
+      @media (max-width: 430px) {
+        .company-brand:not(.company-brand-compact) {
+          transform: scale(.92);
+          transform-origin: left center;
+        }
+
+        .topbar .company-brand-compact {
+          transform: scale(.86);
+          transform-origin: left center;
+        }
+
+        .language-selector {
+          left: 10px !important;
+          bottom: 10px !important;
+        }
+
+        .language-selector select {
+          padding: 8px 10px !important;
+          border-radius: 10px !important;
+        }
+      }
+    `}</style>
+  );
 }
 
 function CompanyBrand({ compact = false, language = 'tr' }) {
   const t = translations[language] || translations.tr;
 
-  const uiStyles = `
-    * { box-sizing: border-box; }
-
-    .dashboard-content { width: min(1180px, calc(100% - 40px)); margin-left: auto; margin-right: auto; }
-    .dashboard-hero { position: relative; }
-    .dashboard-hero h1 { letter-spacing: -0.035em; }
-    .card { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-    .card:hover { box-shadow: 0 14px 38px rgba(21,35,59,.07); }
-    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-    .stat { min-width: 0; }
-    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { min-width: 680px; }
-    .company-brand { user-select: none; }
-    .topbar { min-height: 72px; padding: 14px 24px; gap: 20px; }
-    .topbar .user { display: flex; align-items: center; gap: 14px; }
-    .topbar .user > span { min-width: 0; }
-    .topbar .user strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
-    .auth-page { padding: 28px 20px; }
-    .auth-card { width: min(100%, 460px); }
-    input, select, button { min-height: 44px; }
-
-    @media (max-width: 760px) {
-      .dashboard-content { width: min(100% - 24px, 680px); }
-      .topbar { padding: 12px; min-height: 64px; flex-wrap: wrap; }
-      .topbar .user { width: 100%; justify-content: space-between; gap: 8px; }
-      .topbar .user strong { max-width: 190px; }
-      .stats { grid-template-columns: 1fr; gap: 10px; }
-      .dashboard-hero { padding-top: 4px; }
-      .dashboard-hero h1 { font-size: clamp(32px, 9vw, 48px); }
-      .card { border-radius: 18px !important; }
-      .form .two { grid-template-columns: 1fr !important; }
-      .language-selector, .lang-selector { left: 12px !important; bottom: 12px !important; }
-      .language-selector select, .lang-selector select { max-width: 160px; }
-      .auth-page { padding: 18px 12px 82px; align-items: flex-start !important; }
-      .auth-card { margin-top: 18px; padding: 24px !important; border-radius: 22px !important; }
-    }
-
-    @media (max-width: 430px) {
-      .topbar .company-brand-compact { transform: scale(.88); transform-origin: left center; }
-      .topbar .user button { padding-left: 12px !important; padding-right: 12px !important; }
-      .dashboard-content { width: calc(100% - 16px); }
-      .card { padding: 16px !important; }
-    }
-  `;
-
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: uiStyles }} />
-      <div
-        className={compact ? 'company-brand company-brand-compact' : 'company-brand'}
+    <div
+      className={compact ? 'company-brand company-brand-compact' : 'company-brand'}
       aria-label={t.companyName}
       style={{
         display: 'inline-flex',
@@ -453,8 +788,7 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
         />
         <span>&amp; INFRA</span>
       </span>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -682,23 +1016,229 @@ function AuthScreen({ language, setLanguage }) {
   );
 }
 
-function Header({ name, employeeNumber, role, onLogout, language, setLanguage }) {
+function Header({ name, employeeNumber, role, onLogout, language, setLanguage, profileId }) {
+  const t = translations[language] || translations.tr;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  const initials = String(name || 'U')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadNotifications() {
+      if (!profileId) return;
+
+      let query = supabase
+        .from('shift_requests')
+        .select('id,status,created_at,updated_at,date,start_time,end_time')
+        .order('updated_at', { ascending: false })
+        .limit(8);
+
+      query =
+        role === 'admin'
+          ? query.eq('admin_id', profileId)
+          : query.eq('employee_id', profileId);
+
+      const { data, error } = await query;
+
+      if (!error && mounted) {
+        setNotifications(data || []);
+      }
+    }
+
+    loadNotifications();
+
+    const channel = supabase
+      .channel(`header-notifications-${profileId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shift_requests',
+        },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (!row) return;
+
+          const belongs =
+            role === 'admin'
+              ? row.admin_id === profileId
+              : row.employee_id === profileId;
+
+          if (belongs) {
+            loadNotifications();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [profileId, role, language]);
+
+  const unreadCount = notifications.length > 0 ? Math.min(notifications.length, 9) : 0;
+
   return (
-    <header className="topbar" style={{ position: 'relative' }}>
+    <header className="topbar">
       <CompanyBrand compact language={language} />
 
-      <LanguageSelector language={language} onChange={setLanguage} />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginLeft: 'auto',
+        }}
+      >
+        <div className="notification-wrap">
+          <button
+            className="icon-button"
+            aria-label={t.notificationsCenter}
+            onClick={() => {
+              setNotificationsOpen((value) => !value);
+              setMenuOpen(false);
+            }}
+          >
+            🔔
+            {unreadCount > 0 && (
+              <span className="notification-dot">
+                {unreadCount}
+              </span>
+            )}
+          </button>
 
-      <div className="user">
-        <span>
-          <strong>
-            {name}
-            {employeeNumber ? ` · ${employeeNumber}` : ''}
-          </strong>
-          <small>{role}</small>
-        </span>
+          {notificationsOpen && (
+            <div className="floating-panel">
+              <h3>{t.notificationsCenter}</h3>
 
-        <button onClick={onLogout}>{translations[language]?.logout || 'Çıkış'}</button>
+              {!notifications.length ? (
+                <div className="empty">{t.noNotifications}</div>
+              ) : (
+                notifications.map((item) => (
+                  <div className="notification-item" key={item.id}>
+                    <strong>
+                      {item.status === 'approved'
+                        ? t.approved
+                        : item.status === 'rejected'
+                          ? t.rejectedStatus
+                          : t.pending}
+                    </strong>
+
+                    <small>
+                      {formatDate(item.date, language)} ·{' '}
+                      {item.start_time?.slice(0, 5)} –{' '}
+                      {item.end_time?.slice(0, 5)}
+                    </small>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        <LanguageSelector language={language} onChange={setLanguage} />
+
+        <div className="profile-wrap">
+          <button
+            className="profile-menu-button"
+            onClick={() => {
+              setMenuOpen((value) => !value);
+              setNotificationsOpen(false);
+            }}
+            aria-expanded={menuOpen}
+          >
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span className="profile-avatar">{initials || 'U'}</span>
+              <span
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  lineHeight: 1.15,
+                }}
+              >
+                <strong>{name}</strong>
+                <small style={{ color: '#737b88', marginTop: '3px' }}>
+                  {role}
+                  {employeeNumber ? ` · ${employeeNumber}` : ''}
+                </small>
+              </span>
+              <span>⌄</span>
+            </span>
+          </button>
+
+          {menuOpen && (
+            <div className="floating-panel" style={{ width: '280px' }}>
+              <div className="profile-panel-row">
+                <span className="profile-avatar">{initials || 'U'}</span>
+                <div>
+                  <strong>{name}</strong>
+                  <small style={{ display: 'block', color: '#737b88', marginTop: '3px' }}>
+                    {employeeNumber || t.account}
+                  </small>
+                </div>
+              </div>
+
+              <div style={{ padding: '4px' }}>
+                <div
+                  style={{
+                    padding: '10px',
+                    borderRadius: '10px',
+                    background: '#f8f9fb',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <small style={{ color: '#737b88' }}>
+                    {t.roleLabel}
+                  </small>
+                  <div style={{ fontWeight: 700, marginTop: '3px' }}>
+                    {role}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: '10px',
+                    borderRadius: '10px',
+                    background: '#f8f9fb',
+                    marginBottom: '10px',
+                  }}
+                >
+                  <small style={{ color: '#737b88' }}>
+                    {t.settings}
+                  </small>
+                  <div style={{ fontWeight: 600, marginTop: '3px' }}>
+                    {LANGUAGES[language]?.flag} {LANGUAGES[language]?.label}
+                  </div>
+                </div>
+
+                <button
+                  className="secondary"
+                  style={{ width: '100%' }}
+                  onClick={onLogout}
+                >
+                  {t.logout || 'Çıkış'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -847,7 +1387,7 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
         setLanguage={setLanguage}
       />
 
-      <div className="content dashboard-content">
+      <div className="content">
         {notificationMessage && (
           <div
             className="notice"
@@ -869,7 +1409,7 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
           </div>
         )}
 
-        <div className="hero dashboard-hero">
+        <div className="hero">
           <p className="eyebrow">{t.employeePanel}</p>
 
           <h1>{t.employeeHero}</h1>
@@ -1545,7 +2085,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         setLanguage={setLanguage}
       />
 
-      <div className="content dashboard-content">
+      <div className="content">
 
         {adminNotification && (
           <div
@@ -1569,7 +2109,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         )}
 
         {/* HEADER */}
-        <div className="admin-head dashboard-hero">
+        <div className="admin-head">
           <div>
             <p className="eyebrow">
               YÖNETİCİ PANELİ
@@ -2296,257 +2836,3 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
               <p className="eyebrow">
                 {t.employeeDetail}
               </p>
-
-              <h2
-                style={{
-                  fontSize: '28px',
-                  marginBottom: '6px',
-                  paddingRight: '80px',
-                }}
-              >
-                {selectedEmployee.full_name}
-              </h2>
-
-              <p className="muted">
-                {selectedEmployee.employee_number ||
-                  'EMP numarası yok'}
-              </p>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gap: '12px',
-                  marginTop: '24px',
-                }}
-              >
-                <div className="notice">
-                  <strong>📧 {t.emailLabel}</strong>
-                  <br />
-                  {selectedEmployee.email || '-'}
-                </div>
-
-                <div className="notice">
-                  <strong>📱 {t.phoneLabel}</strong>
-                  <br />
-                  {selectedEmployee.phone || '-'}
-                </div>
-              </div>
-
-              <div
-                className="stats"
-                style={{
-                  marginTop: '18px',
-                }}
-              >
-                <div className="stat">
-                  <span>{t.thisWeek}</span>
-                  <strong>
-                    {shifts
-                      .filter((shift) => {
-                        return (
-                          shift.profiles?.id ===
-                            selectedEmployee.id &&
-                          shift.status === 'approved' &&
-                          shift.date >= weekDays[0] &&
-                          shift.date <= weekDays[6]
-                        );
-                      })
-                      .reduce(
-                        (total, shift) =>
-                          total +
-                          duration(
-                            shift.start_time,
-                            shift.end_time
-                          ),
-                        0
-                      )
-                      .toFixed(1)}
-                    h
-                  </strong>
-                </div>
-
-                <div className="stat">
-                  <span>{t.thisMonth}</span>
-                  <strong>
-                    {shifts
-                      .filter((shift) => {
-                        if (
-                          shift.profiles?.id !==
-                          selectedEmployee.id
-                        ) {
-                          return false;
-                        }
-
-                        if (shift.status !== 'approved') {
-                          return false;
-                        }
-
-                        return shift.date.startsWith(
-                          today().slice(0, 7)
-                        );
-                      })
-                      .reduce(
-                        (total, shift) =>
-                          total +
-                          duration(
-                            shift.start_time,
-                            shift.end_time
-                          ),
-                        0
-                      )
-                      .toFixed(1)}
-                    h
-                  </strong>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '28px' }}>
-                <p className="eyebrow">{t.history}</p>
-
-                <h2 style={{ marginTop: '6px' }}>
-                  {t.recentShifts}
-                </h2>
-
-                {shifts.filter(
-                  (shift) =>
-                    shift.profiles?.id === selectedEmployee.id &&
-                    shift.status === 'approved' &&
-                    shift.date < today()
-                ).length === 0 ? (
-                  <div className="empty">{t.noHistory}</div>
-                ) : (
-                  <div className="mini-list">
-                    {shifts
-                      .filter(
-                        (shift) =>
-                          shift.profiles?.id === selectedEmployee.id &&
-                          shift.status === 'approved' &&
-                          shift.date < today()
-                      )
-                      .sort((a, b) => {
-                        const first = `${a.date} ${a.start_time}`;
-                        const second = `${b.date} ${b.start_time}`;
-                        return second.localeCompare(first);
-                      })
-                      .slice(0, 10)
-                      .map((shift) => (
-                        <div className="mini-row" key={shift.id}>
-                          <div>
-                            <strong>{formatDate(shift.date, language)}</strong>
-                            <span>
-                              {shift.start_time.slice(0, 5)} – {shift.end_time.slice(0, 5)}
-                            </span>
-                            <span>{shift.locations?.name || '-'}</span>
-                          </div>
-                          <strong>
-                            {duration(shift.start_time, shift.end_time).toFixed(1)} {t.hour}
-                          </strong>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-
-              <div
-                style={{
-                  marginTop: '28px',
-                }}
-              >
-                <p className="eyebrow">
-                  {t.upcoming}
-                </p>
-
-                <h2
-                  style={{
-                    marginTop: '6px',
-                  }}
-                >
-                  {t.planned}
-                </h2>
-
-                {shifts.filter(
-                  (shift) =>
-                    shift.profiles?.id ===
-                      selectedEmployee.id &&
-                    shift.date >= today()
-                ).length === 0 ? (
-                  <div className="empty">
-                    {t.noUpcoming}
-                  </div>
-                ) : (
-                  <div className="mini-list">
-                    {shifts
-                      .filter(
-                        (shift) =>
-                          shift.profiles?.id ===
-                            selectedEmployee.id &&
-                          shift.date >= today()
-                      )
-                      .sort((a, b) => {
-                        const first =
-                          `${a.date} ${a.start_time}`;
-
-                        const second =
-                          `${b.date} ${b.start_time}`;
-
-                        return first.localeCompare(
-                          second
-                        );
-                      })
-                      .slice(0, 10)
-                      .map((shift) => (
-                        <div
-                          className="mini-row"
-                          key={shift.id}
-                        >
-                          <div>
-                            <strong>
-                              {shift.date}
-                            </strong>
-
-                            <span>
-                              {shift.start_time.slice(
-                                0,
-                                5
-                              )}{' '}
-                              –{' '}
-                              {shift.end_time.slice(
-                                0,
-                                5
-                              )}
-                            </span>
-
-                            <span>
-                              {shift.locations?.name ||
-                                '-'}
-                            </span>
-                          </div>
-
-                          <em
-                            className={
-                              shift.status ===
-                              'approved'
-                                ? 'approved'
-                                : shift.status ===
-                                  'rejected'
-                                ? 'rejected'
-                                : 'pending'
-                            }
-                          >
-                            {statusText(
-                              shift.status
-                            )}
-                          </em>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        {/* ADMIN PANEL KAPANIŞI */}
-      </div>
-    </main>
-  );
-}
