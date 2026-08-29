@@ -62,6 +62,10 @@ const translations = {
     shiftConflictDesc: 'Bu çalışanın seçilen saatlerde zaten başka bir vardiyası bulunuyor.',
     existingShift: 'Mevcut vardiya',
     cannotSendConflict: 'Çalışma talebi gönderilemedi çünkü vardiya çakışıyor.',
+    notifications: 'Bildirimler',
+    newRequestNotification: 'Yeni çalışma talebin var.',
+    pendingRequests: 'Bekleyen talepler',
+    requestResponseNotification: 'Bir çalışma talebine cevap geldi.',
   },
   nl: {
     loading: 'Laden...', profileLoading: 'Profiel laden...', login: 'INLOGGEN', signup: 'NIEUW ACCOUNT',
@@ -102,6 +106,10 @@ const translations = {
     shiftConflictDesc: 'Deze medewerker heeft op de gekozen tijden al een andere dienst.',
     existingShift: 'Bestaande dienst',
     cannotSendConflict: 'Het werkverzoek kan niet worden verstuurd omdat de diensten overlappen.',
+    notifications: 'Meldingen',
+    newRequestNotification: 'Je hebt een nieuw werkverzoek.',
+    pendingRequests: 'Openstaande verzoeken',
+    requestResponseNotification: 'Er is een antwoord op een werkverzoek ontvangen.',
   },
   en: {
     loading: 'Loading...', profileLoading: 'Loading profile...', login: 'LOGIN', signup: 'NEW ACCOUNT',
@@ -139,6 +147,10 @@ const translations = {
     shiftConflictDesc: 'This employee already has another shift during the selected time.',
     existingShift: 'Existing shift',
     cannotSendConflict: 'The work request cannot be sent because the shifts overlap.',
+    notifications: 'Notifications',
+    newRequestNotification: 'You have a new work request.',
+    pendingRequests: 'Pending requests',
+    requestResponseNotification: 'A work request has received a response.',
   },
 };
 
@@ -606,6 +618,8 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [message, setMessage] = useState('');
+  const [newRequestCount, setNewRequestCount] = useState(0);
+  const [notificationMessage, setNotificationMessage] = useState('');
   const t = translations[language] || translations.tr;
 
   useEffect(() => {
@@ -644,6 +658,36 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
   useEffect(() => {
     loadRequests();
   }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`employee-request-notifications-${profile.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'shift_requests',
+          filter: `employee_id=eq.${profile.id}`,
+        },
+        () => {
+          setNewRequestCount((count) => count + 1);
+          setNotificationMessage(t.newRequestNotification);
+          loadRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile.id, language]);
+
+  useEffect(() => {
+    setNewRequestCount(
+      requests.filter((request) => request.status === 'pending').length
+    );
+  }, [requests]);
 
   async function respondToRequest(request, status) {
     setMessage('');
@@ -714,6 +758,27 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
       />
 
       <div className="content">
+        {notificationMessage && (
+          <div
+            className="notice"
+            style={{
+              marginBottom: '16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '12px',
+            }}
+          >
+            <strong>🔔 {notificationMessage}</strong>
+            <button
+              className="secondary"
+              onClick={() => setNotificationMessage('')}
+            >
+              {t.close}
+            </button>
+          </div>
+        )}
+
         <div className="hero">
           <p className="eyebrow">{t.employeePanel}</p>
 
@@ -734,7 +799,22 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
         )}
 
         <section className="card">
-          <h2>{t.requestsTitle}</h2>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <h2 style={{ margin: 0 }}>{t.requestsTitle}</h2>
+            {newRequestCount > 0 && (
+              <span className="badge">
+                🔔 {newRequestCount} {t.pendingRequests}
+              </span>
+            )}
+          </div>
 
           {loadingRequests ? (
             <p className="muted">{t.requestsLoading}</p>
@@ -869,6 +949,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
   const [requestNote, setRequestNote] = useState('');
   const [requestBusy, setRequestBusy] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
+  const [adminNotification, setAdminNotification] = useState('');
   const t = translations[language] || translations.tr;
 
   useEffect(() => {
@@ -922,6 +1003,29 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`admin-request-notifications-${profile.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'shift_requests',
+          filter: `admin_id=eq.${profile.id}`,
+        },
+        () => {
+          setAdminNotification(t.requestResponseNotification);
+          load();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile.id, language]);
 
   async function updateStatus(id, status) {
     const { error } = await supabase
@@ -1267,6 +1371,27 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
       />
 
       <div className="content">
+
+        {adminNotification && (
+          <div
+            className="notice"
+            style={{
+              marginBottom: '16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '12px',
+            }}
+          >
+            <strong>🔔 {adminNotification}</strong>
+            <button
+              className="secondary"
+              onClick={() => setAdminNotification('')}
+            >
+              {t.close}
+            </button>
+          </div>
+        )}
 
         {/* HEADER */}
         <div className="admin-head">
@@ -1645,7 +1770,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
                     </strong>
 
                     <span>
-                      {formatDate(day)}
+                      {formatDate(day, language)}
                     </span>
                   </div>
                 )
