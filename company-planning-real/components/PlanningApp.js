@@ -546,6 +546,7 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
       top: 132px !important;
       right: 32px !important;
       z-index: 5000 !important;
+      transform: translateZ(0);
     }
     .notification-button {
       position: relative;
@@ -592,9 +593,9 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
       box-shadow: 0 2px 7px rgba(217,45,32,.25);
     }
     .notification-panel {
-      position: absolute;
-      right: 0;
-      top: calc(100% + 10px);
+      position: fixed;
+      right: 32px;
+      top: 190px;
       width: min(410px, calc(100vw - 28px));
       max-height: min(600px, calc(100vh - 110px));
       overflow: hidden;
