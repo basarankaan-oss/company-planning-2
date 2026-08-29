@@ -309,7 +309,7 @@ function EmployeePanel({ profile, onLogout }) {
     const { data, error } = await supabase
       .from('shift_requests')
       .select(
-        'id,date,start_time,end_time,note,status,created_at,locations(name),profiles!shift_requests_admin_id_fkey(full_name)'
+        'id,date,start_time,end_time,location_id,note,status,created_at,locations(name),profiles!shift_requests_admin_id_fkey(full_name)'
       )
       .eq('employee_id', profile.id)
       .order('date', { ascending: true })
