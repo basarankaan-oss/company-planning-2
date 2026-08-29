@@ -365,9 +365,56 @@ export default function PlanningApp() {
 function CompanyBrand({ compact = false, language = 'tr' }) {
   const t = translations[language] || translations.tr;
 
+  const uiStyles = `
+    * { box-sizing: border-box; }
+
+    .dashboard-content { width: min(1180px, calc(100% - 40px)); margin-left: auto; margin-right: auto; }
+    .dashboard-hero { position: relative; }
+    .dashboard-hero h1 { letter-spacing: -0.035em; }
+    .card { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .card:hover { box-shadow: 0 14px 38px rgba(21,35,59,.07); }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .stat { min-width: 0; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 680px; }
+    .company-brand { user-select: none; }
+    .topbar { min-height: 72px; padding: 14px 24px; gap: 20px; }
+    .topbar .user { display: flex; align-items: center; gap: 14px; }
+    .topbar .user > span { min-width: 0; }
+    .topbar .user strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+    .auth-page { padding: 28px 20px; }
+    .auth-card { width: min(100%, 460px); }
+    input, select, button { min-height: 44px; }
+
+    @media (max-width: 760px) {
+      .dashboard-content { width: min(100% - 24px, 680px); }
+      .topbar { padding: 12px; min-height: 64px; flex-wrap: wrap; }
+      .topbar .user { width: 100%; justify-content: space-between; gap: 8px; }
+      .topbar .user strong { max-width: 190px; }
+      .stats { grid-template-columns: 1fr; gap: 10px; }
+      .dashboard-hero { padding-top: 4px; }
+      .dashboard-hero h1 { font-size: clamp(32px, 9vw, 48px); }
+      .card { border-radius: 18px !important; }
+      .form .two { grid-template-columns: 1fr !important; }
+      .language-selector, .lang-selector { left: 12px !important; bottom: 12px !important; }
+      .language-selector select, .lang-selector select { max-width: 160px; }
+      .auth-page { padding: 18px 12px 82px; align-items: flex-start !important; }
+      .auth-card { margin-top: 18px; padding: 24px !important; border-radius: 22px !important; }
+    }
+
+    @media (max-width: 430px) {
+      .topbar .company-brand-compact { transform: scale(.88); transform-origin: left center; }
+      .topbar .user button { padding-left: 12px !important; padding-right: 12px !important; }
+      .dashboard-content { width: calc(100% - 16px); }
+      .card { padding: 16px !important; }
+    }
+  `;
+
   return (
-    <div
-      className={compact ? 'company-brand company-brand-compact' : 'company-brand'}
+    <>
+      <style dangerouslySetInnerHTML={{ __html: uiStyles }} />
+      <div
+        className={compact ? 'company-brand company-brand-compact' : 'company-brand'}
       aria-label={t.companyName}
       style={{
         display: 'inline-flex',
@@ -406,7 +453,8 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
         />
         <span>&amp; INFRA</span>
       </span>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -799,7 +847,7 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
         setLanguage={setLanguage}
       />
 
-      <div className="content">
+      <div className="content dashboard-content">
         {notificationMessage && (
           <div
             className="notice"
@@ -821,7 +869,7 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
           </div>
         )}
 
-        <div className="hero">
+        <div className="hero dashboard-hero">
           <p className="eyebrow">{t.employeePanel}</p>
 
           <h1>{t.employeeHero}</h1>
@@ -1497,7 +1545,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         setLanguage={setLanguage}
       />
 
-      <div className="content">
+      <div className="content dashboard-content">
 
         {adminNotification && (
           <div
@@ -1521,7 +1569,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         )}
 
         {/* HEADER */}
-        <div className="admin-head">
+        <div className="admin-head dashboard-hero">
           <div>
             <p className="eyebrow">
               YÖNETİCİ PANELİ
