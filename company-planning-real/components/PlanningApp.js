@@ -1013,14 +1013,21 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
           event: 'UPDATE',
           schema: 'public',
           table: 'shift_requests',
-          filter: `admin_id=eq.${profile.id}`,
         },
-        () => {
-          setAdminNotification(t.requestResponseNotification);
-          load();
+        (payload) => {
+          // Realtime filtrelemesini burada yapıyoruz.
+          // Böylece admin_id filtresi nedeniyle bildirimin kaçırılmasını önlüyoruz.
+          if (payload.new?.admin_id === profile.id) {
+            setAdminNotification(t.requestResponseNotification);
+            load();
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Admin notification channel error');
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
