@@ -56,7 +56,7 @@ const translations = {
     status: 'Durum', place: 'Yer', delete: 'Sil', noFiltered: 'Bu filtrelere uyan plan yok.',
     employeeDetail: 'ÇALIŞAN DETAYI', noEmp: 'EMP numarası yok', close: 'Kapat',
     upcoming: 'YAKLAŞAN VARDİYALAR', planned: 'Planlanan çalışmalar',
-    noUpcoming: 'Yaklaşan vardiya bulunmuyor.', emailLabel: 'E-posta', phoneLabel: 'Telefon',
+    noUpcoming: 'Yaklaşan vardiya bulunmuyor.', history: 'ÇALIŞMA GEÇMİŞİ', recentShifts: 'Son çalışmalar', noHistory: 'Geçmiş çalışma bulunmuyor.', emailLabel: 'E-posta', phoneLabel: 'Telefon',
     thisMonth: 'Bu ay',
     shiftConflict: 'Vardiya çakışması',
     shiftConflictDesc: 'Bu çalışanın seçilen saatlerde zaten başka bir vardiyası bulunuyor.',
@@ -100,7 +100,7 @@ const translations = {
     noWeekPlans: 'Geen planning voor deze week.', worker: 'MEDEWERKER', hour: 'uur', status: 'Status',
     place: 'Locatie', delete: 'Verwijderen', noFiltered: 'Geen plannen voor deze filters.',
     employeeDetail: 'MEDEWERKERDETAIL', noEmp: 'Geen personeelsnummer', close: 'Sluiten',
-    upcoming: 'KOMENDE DIENSTEN', planned: 'Geplande diensten', noUpcoming: 'Geen komende diensten.',
+    upcoming: 'KOMENDE DIENSTEN', planned: 'Geplande diensten', noUpcoming: 'Geen komende diensten.', history: 'WERKGESCHIEDENIS', recentShifts: 'Recente diensten', noHistory: 'Geen werkgeschiedenis.',
     emailLabel: 'E-mail', phoneLabel: 'Telefoon', thisMonth: 'Deze maand',
     shiftConflict: 'Dienstconflict',
     shiftConflictDesc: 'Deze medewerker heeft op de gekozen tijden al een andere dienst.',
@@ -141,7 +141,7 @@ const translations = {
     noWeekPlans: 'No plans this week.', worker: 'EMPLOYEE', hour: 'hours', status: 'Status',
     place: 'Location', delete: 'Delete', noFiltered: 'No plans match these filters.',
     employeeDetail: 'EMPLOYEE DETAILS', noEmp: 'No employee number', close: 'Close',
-    upcoming: 'UPCOMING SHIFTS', planned: 'Scheduled work', noUpcoming: 'No upcoming shifts.',
+    upcoming: 'UPCOMING SHIFTS', planned: 'Scheduled work', noUpcoming: 'No upcoming shifts.', history: 'WORK HISTORY', recentShifts: 'Recent shifts', noHistory: 'No work history.',
     emailLabel: 'Email', phoneLabel: 'Phone', thisMonth: 'This month',
     shiftConflict: 'Shift conflict',
     shiftConflictDesc: 'This employee already has another shift during the selected time.',
@@ -1587,7 +1587,11 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
 
                 <tbody>
                   {topEmployees.map((employee, index) => (
-                    <tr key={employee.id}>
+                    <tr
+                      key={employee.id}
+                      onClick={() => setSelectedEmployee(employee)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td>
                         <strong>
                           {index === 0
@@ -2301,6 +2305,53 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
                     h
                   </strong>
                 </div>
+              </div>
+
+              <div style={{ marginTop: '28px' }}>
+                <p className="eyebrow">{t.history}</p>
+
+                <h2 style={{ marginTop: '6px' }}>
+                  {t.recentShifts}
+                </h2>
+
+                {shifts.filter(
+                  (shift) =>
+                    shift.profiles?.id === selectedEmployee.id &&
+                    shift.status === 'approved' &&
+                    shift.date < today()
+                ).length === 0 ? (
+                  <div className="empty">{t.noHistory}</div>
+                ) : (
+                  <div className="mini-list">
+                    {shifts
+                      .filter(
+                        (shift) =>
+                          shift.profiles?.id === selectedEmployee.id &&
+                          shift.status === 'approved' &&
+                          shift.date < today()
+                      )
+                      .sort((a, b) => {
+                        const first = `${a.date} ${a.start_time}`;
+                        const second = `${b.date} ${b.start_time}`;
+                        return second.localeCompare(first);
+                      })
+                      .slice(0, 10)
+                      .map((shift) => (
+                        <div className="mini-row" key={shift.id}>
+                          <div>
+                            <strong>{formatDate(shift.date, language)}</strong>
+                            <span>
+                              {shift.start_time.slice(0, 5)} – {shift.end_time.slice(0, 5)}
+                            </span>
+                            <span>{shift.locations?.name || '-'}</span>
+                          </div>
+                          <strong>
+                            {duration(shift.start_time, shift.end_time).toFixed(1)} {t.hour}
+                          </strong>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
 
               <div
