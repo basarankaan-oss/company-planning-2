@@ -162,8 +162,23 @@ function AuthScreen() {
     setMessage('');
 
     if (mode === 'signup') {
-      const cleanPhone = phone.trim();
+const rawPhone = phone.trim();
 
+const digits = rawPhone.replace(/\D/g, '');
+
+let cleanPhone = rawPhone;
+
+if (digits.startsWith('06') && digits.length === 10) {
+  cleanPhone = '+31' + digits.slice(1);
+} else if (digits.startsWith('316') && digits.length === 11) {
+  cleanPhone = '+' + digits;
+} else if (digits.startsWith('31') && digits.length === 11) {
+  cleanPhone = '+' + digits;
+} else if (digits.startsWith('6') && digits.length === 9) {
+  cleanPhone = '+31' + digits;
+} else if (rawPhone.startsWith('+')) {
+  cleanPhone = '+' + digits;
+}
       if (!cleanPhone) {
         setMessage('Lütfen telefon numaranı gir.');
         setBusy(false);
