@@ -1377,7 +1377,71 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         }
       });
 
-    return () => {
+  const notificationItems = useMemo(() => {
+    const items = [];
+
+    // Existing admin notification message.
+    if (adminNotification) {
+      items.push({
+        id: 'admin-message',
+        type: 'info',
+        title: 'Bildirim',
+        message: adminNotification,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // Build notifications from recent shift/request records when available.
+    shifts
+      .slice()
+      .sort((a, b) => {
+        const first = `${a.date || ''} ${a.start_time || ''}`;
+        const second = `${b.date || ''} ${b.start_time || ''}`;
+        return second.localeCompare(first);
+      })
+      .slice(0, 12)
+      .forEach((shift) => {
+        const status = shift.status;
+        const name = shift.profiles?.full_name || 'Çalışan';
+        const place = shift.locations?.name || '-';
+        const time = `${shift.start_time?.slice(0, 5) || '--:--'} – ${shift.end_time?.slice(0, 5) || '--:--'}`;
+
+        items.push({
+          id: `shift-${shift.id}`,
+          type: status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'info',
+          title:
+            status === 'approved'
+              ? 'Vardiya onaylandı'
+              : status === 'rejected'
+                ? 'Vardiya reddedildi'
+                : 'Yeni vardiya',
+          message: `${name} • ${shift.date || '-'} • ${time} • ${place}`,
+          createdAt: `${shift.date || '0000-00-00'}T${shift.start_time || '00:00'}`,
+        });
+      });
+
+    return items.slice(0, 15);
+  }, [adminNotification, shifts]);
+
+  const unreadNotificationCount = notificationItems.filter(
+    (item) => !readNotificationIds.includes(item.id)
+  ).length;
+
+  const markNotificationRead = (id) => {
+    setReadNotificationIds((current) => {
+      const next = current.includes(id) ? current : [...current, id];
+      localStorage.setItem('supra_read_notifications', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const markAllNotificationsRead = () => {
+    const next = notificationItems.map((item) => item.id);
+    setReadNotificationIds(next);
+    localStorage.setItem('supra_read_notifications', JSON.stringify(next));
+  };
+
+  return () => {
       supabase.removeChannel(channel);
     };
   }, [profile.id, language]);
@@ -2692,70 +2756,6 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
                     {shifts
                       .filter((shift) => {
                       
-  const notificationItems = useMemo(() => {
-    const items = [];
-
-    // Existing admin notification message.
-    if (adminNotification) {
-      items.push({
-        id: 'admin-message',
-        type: 'info',
-        title: 'Bildirim',
-        message: adminNotification,
-        createdAt: new Date().toISOString(),
-      });
-    }
-
-    // Build notifications from recent shift/request records when available.
-    shifts
-      .slice()
-      .sort((a, b) => {
-        const first = `${a.date || ''} ${a.start_time || ''}`;
-        const second = `${b.date || ''} ${b.start_time || ''}`;
-        return second.localeCompare(first);
-      })
-      .slice(0, 12)
-      .forEach((shift) => {
-        const status = shift.status;
-        const name = shift.profiles?.full_name || 'Çalışan';
-        const place = shift.locations?.name || '-';
-        const time = `${shift.start_time?.slice(0, 5) || '--:--'} – ${shift.end_time?.slice(0, 5) || '--:--'}`;
-
-        items.push({
-          id: `shift-${shift.id}`,
-          type: status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'info',
-          title:
-            status === 'approved'
-              ? 'Vardiya onaylandı'
-              : status === 'rejected'
-                ? 'Vardiya reddedildi'
-                : 'Yeni vardiya',
-          message: `${name} • ${shift.date || '-'} • ${time} • ${place}`,
-          createdAt: `${shift.date || '0000-00-00'}T${shift.start_time || '00:00'}`,
-        });
-      });
-
-    return items.slice(0, 15);
-  }, [adminNotification, shifts]);
-
-  const unreadNotificationCount = notificationItems.filter(
-    (item) => !readNotificationIds.includes(item.id)
-  ).length;
-
-  const markNotificationRead = (id) => {
-    setReadNotificationIds((current) => {
-      const next = current.includes(id) ? current : [...current, id];
-      localStorage.setItem('supra_read_notifications', JSON.stringify(next));
-      return next;
-    });
-  };
-
-  const markAllNotificationsRead = () => {
-    const next = notificationItems.map((item) => item.id);
-    setReadNotificationIds(next);
-    localStorage.setItem('supra_read_notifications', JSON.stringify(next));
-  };
-
   return (
                           shift.profiles?.id ===
                             selectedEmployee.id &&
