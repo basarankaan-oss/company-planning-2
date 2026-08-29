@@ -1802,6 +1802,81 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         setLanguage={setLanguage}
       />
 
+
+      <div
+        className="notification-wrap"
+        style={{
+          position: 'fixed',
+          top: '132px',
+          right: '32px',
+          zIndex: 2000,
+        }}
+      >
+        <button
+          className="secondary notification-button"
+          type="button"
+          aria-label="Bildirimler"
+          onClick={() => setNotificationOpen((open) => !open)}
+        >
+          <span style={{ fontSize: '20px', lineHeight: 1 }}>🔔</span>
+          {unreadNotificationCount > 0 && (
+            <span className="notification-count">
+              {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+            </span>
+          )}
+        </button>
+
+        {notificationOpen && (
+          <div className="notification-panel">
+            <div className="notification-head">
+              <div>
+                <strong>Bildirimler</strong>
+                <div className="muted" style={{ fontSize: '11px', marginTop: '3px' }}>
+                  {unreadNotificationCount} okunmamış
+                </div>
+              </div>
+              {unreadNotificationCount > 0 && (
+                <button
+                  className="secondary"
+                  type="button"
+                  onClick={markAllNotificationsRead}
+                  style={{ padding: '7px 10px', fontSize: '11px' }}
+                >
+                  Tümünü okundu yap
+                </button>
+              )}
+            </div>
+
+            <div className="notification-list">
+              {!notificationItems.length ? (
+                <div className="notification-empty">Henüz bildirim yok.</div>
+              ) : (
+                notificationItems.map((item) => {
+                  const unread = !readNotificationIds.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`notification-item ${unread ? 'unread' : ''}`}
+                      onClick={() => markNotificationRead(item.id)}
+                    >
+                      <span className={`notification-dot ${unread ? '' : 'read'}`} />
+                      <span className="notification-content">
+                        <strong>{item.title}</strong>
+                        <span>{item.message}</span>
+                        <small className="notification-time">
+                          {item.createdAt?.slice(0, 16).replace('T', ' ') || ''}
+                        </small>
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="content dashboard-content">
 
         {adminNotification && (
