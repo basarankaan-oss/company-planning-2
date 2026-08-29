@@ -16,8 +16,13 @@ export default function PlanningApp(){
  async function logout(){await supabase.auth.signOut()}
  if(loading)return <div className="loading">Yükleniyor...</div>;
  if(!session)return <AuthScreen/>;
- if(profile?.role==='admin')return <AdminPanel profile={profile} onLogout={logout}/>;
- return <EmployeePanel profile={profile} onLogout={logout}/>;
+if (!profile) return <div className="loading">Profil yükleniyor...</div>;
+
+if (profile.role === 'admin') {
+  return <AdminPanel profile={profile} onLogout={logout}/>;
+}
+
+return <EmployeePanel profile={profile} onLogout={logout}/>;
 }
 
 function AuthScreen(){
