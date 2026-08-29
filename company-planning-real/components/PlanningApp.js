@@ -527,36 +527,67 @@ function EmployeePanel({ profile, onLogout }) {
 function AdminPanel({ profile, onLogout }) {
   const [shifts, setShifts] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [employees, setEmployees] = useState([]);
+
   const [search, setSearch] = useState('');
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
+
   const [weekStart, setWeekStart] = useState(
     getMonday(today())
   );
 
-  async function load() {
-    const [{ data: ss, error: shiftError }, { data: locs }] =
-      await Promise.all([
-        supabase
-          .from('shifts')
-          .select(
-            'id,date,start_time,end_time,status,profiles(id,full_name,employee_number),locations(name)'
-          )
-          .order('date', { ascending: false })
-          .order('start_time'),
+  // Çalışma talebi formu
+  const [requestEmployee, setRequestEmployee] = useState('');
+  const [requestDate, setRequestDate] = useState('');
+  const [requestStart, setRequestStart] = useState('');
+  const [requestEnd, setRequestEnd] = useState('');
+  const [requestLocation, setRequestLocation] = useState('');
+  const [requestNote, setRequestNote] = useState('');
+  const [requestBusy, setRequestBusy] = useState(false);
+  const [requestMessage, setRequestMessage] = useState('');
 
-        supabase
-          .from('locations')
-          .select('id,name')
-          .order('name'),
-      ]);
+  async function load() {
+    const [
+      { data: ss, error: shiftError },
+      { data: locs, error: locationError },
+      { data: emps, error: employeeError },
+    ] = await Promise.all([
+      supabase
+        .from('shifts')
+        .select(
+          'id,date,start_time,end_time,status,profiles(id,full_name,employee_number),locations(name)'
+        )
+        .order('date', { ascending: false })
+        .order('start_time'),
+
+      supabase
+        .from('locations')
+        .select('id,name')
+        .order('name'),
+
+      supabase
+        .from('profiles')
+        .select('id,full_name,employee_number,role')
+        .eq('role', 'employee')
+        .order('full_name'),
+    ]);
 
     if (shiftError) {
       console.error(shiftError);
     }
 
+    if (locationError) {
+      console.error(locationError);
+    }
+
+    if (employeeError) {
+      console.error(employeeError);
+    }
+
     setShifts(ss || []);
     setLocations(locs || []);
+    setEmployees(emps || []);
   }
 
   useEffect(() => {
@@ -589,6 +620,65 @@ function AdminPanel({ profile, onLogout }) {
     } else {
       await load();
     }
+  }
+
+  async function sendShiftRequest(e) {
+    e.preventDefault();
+
+    setRequestMessage('');
+
+    if (
+      !requestEmployee ||
+      !requestDate ||
+      !requestStart ||
+      !requestEnd ||
+      !requestLocation
+    ) {
+      setRequestMessage(
+        'Lütfen çalışan, tarih, saat ve şehir alanlarını doldurun.'
+      );
+      return;
+    }
+
+    if (requestEnd <= requestStart) {
+      setRequestMessage(
+        'Bitiş saati başlangıç saatinden sonra olmalıdır.'
+      );
+      return;
+    }
+
+    setRequestBusy(true);
+
+    const { error } = await supabase
+      .from('shift_requests')
+      .insert({
+        employee_id: requestEmployee,
+        admin_id: profile.id,
+        location_id: requestLocation,
+        date: requestDate,
+        start_time: requestStart,
+        end_time: requestEnd,
+        note: requestNote.trim() || null,
+        status: 'pending',
+      });
+
+    if (error) {
+      console.error(error);
+      setRequestMessage(error.message);
+    } else {
+      setRequestMessage(
+        '✓ Çalışma talebi başarıyla gönderildi.'
+      );
+
+      setRequestEmployee('');
+      setRequestDate('');
+      setRequestStart('');
+      setRequestEnd('');
+      setRequestLocation('');
+      setRequestNote('');
+    }
+
+    setRequestBusy(false);
   }
 
   const filtered = useMemo(() => {
@@ -634,7 +724,7 @@ function AdminPanel({ profile, onLogout }) {
     );
   }, [filtered, weekDays]);
 
-  const employees = useMemo(() => {
+  const employeesInWeek = useMemo(() => {
     const map = new Map();
 
     weekShifts.forEach((shift) => {
@@ -716,7 +806,8 @@ function AdminPanel({ profile, onLogout }) {
 
   const total = shifts.reduce(
     (n, s) =>
-      n + duration(
+      n +
+      duration(
         s.start_time,
         s.end_time
       ),
@@ -743,6 +834,8 @@ function AdminPanel({ profile, onLogout }) {
       />
 
       <div className="content">
+
+        {/* HEADER */}
         <div className="admin-head">
           <div>
             <p className="eyebrow">
@@ -764,6 +857,7 @@ function AdminPanel({ profile, onLogout }) {
           </button>
         </div>
 
+        {/* İSTATİSTİKLER */}
         <div className="stats">
           <div className="stat">
             <span>Toplam plan</span>
@@ -781,6 +875,170 @@ function AdminPanel({ profile, onLogout }) {
           </div>
         </div>
 
+        {/* ÇALIŞMA TALEBİ */}
+        <section
+          className="card"
+          style={{ marginBottom: '18px' }}
+        >
+          <div style={{ marginBottom: '20px' }}>
+            <p className="eyebrow">
+              YENİ TALEP
+            </p>
+
+            <h2 style={{ marginBottom: '8px' }}>
+              Çalışma Talebi Gönder
+            </h2>
+
+            <p className="muted">
+              Bir çalışana belirli tarih, saat ve şehir
+              için çalışma talebi gönder.
+            </p>
+          </div>
+
+          <form
+            className="form"
+            onSubmit={sendShiftRequest}
+          >
+
+            {/* ÇALIŞAN */}
+            <label>
+              Çalışan
+
+              <select
+                value={requestEmployee}
+                onChange={(e) =>
+                  setRequestEmployee(e.target.value)
+                }
+                required
+              >
+                <option value="">
+                  Çalışan seçin
+                </option>
+
+                {employees.map((employee) => (
+                  <option
+                    key={employee.id}
+                    value={employee.id}
+                  >
+                    {employee.full_name}
+                    {employee.employee_number
+                      ? ` · ${employee.employee_number}`
+                      : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {/* TARİH */}
+            <label>
+              Tarih
+
+              <input
+                type="date"
+                value={requestDate}
+                onChange={(e) =>
+                  setRequestDate(e.target.value)
+                }
+                required
+              />
+            </label>
+
+            {/* SAAT */}
+            <div className="two">
+              <label>
+                Başlangıç
+
+                <input
+                  type="time"
+                  value={requestStart}
+                  onChange={(e) =>
+                    setRequestStart(e.target.value)
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Bitiş
+
+                <input
+                  type="time"
+                  value={requestEnd}
+                  onChange={(e) =>
+                    setRequestEnd(e.target.value)
+                  }
+                  required
+                />
+              </label>
+            </div>
+
+            {/* ŞEHİR */}
+            <label>
+              Şehir
+
+              <select
+                value={requestLocation}
+                onChange={(e) =>
+                  setRequestLocation(e.target.value)
+                }
+                required
+              >
+                <option value="">
+                  Şehir seçin
+                </option>
+
+                {locations.map((l) => (
+                  <option
+                    key={l.id}
+                    value={l.id}
+                  >
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {/* NOT */}
+            <label>
+              Not
+              <span
+                style={{
+                  fontWeight: 500,
+                  color: '#7b818a',
+                  fontSize: '12px',
+                }}
+              >
+                İsteğe bağlı
+              </span>
+
+              <input
+                type="text"
+                placeholder="Örn. Sabah vardiyası için müsait misin?"
+                value={requestNote}
+                onChange={(e) =>
+                  setRequestNote(e.target.value)
+                }
+              />
+            </label>
+
+            <button
+              className="primary"
+              disabled={requestBusy}
+            >
+              {requestBusy
+                ? 'Gönderiliyor...'
+                : 'ÇALIŞMA TALEBİ GÖNDER →'}
+            </button>
+
+            {requestMessage && (
+              <div className="notice">
+                {requestMessage}
+              </div>
+            )}
+          </form>
+        </section>
+
+        {/* FİLTRELER */}
         <div className="toolbar card">
           <input
             placeholder="Çalışan veya personel no ara..."
@@ -819,6 +1077,7 @@ function AdminPanel({ profile, onLogout }) {
           </select>
         </div>
 
+        {/* HAFTALIK PLANNING */}
         <section className="card">
           <div className="calendar-header">
             <div>
@@ -881,96 +1140,99 @@ function AdminPanel({ profile, onLogout }) {
               )}
             </div>
 
-            {!employees.length ? (
+            {!employeesInWeek.length ? (
               <div className="empty">
                 Bu haftada plan bulunmuyor.
               </div>
             ) : (
-              employees.map((employee) => (
-                <div
-                  className="calendar-row"
-                  key={
-                    employee.id ||
-                    employee.employee_number ||
-                    employee.full_name
-                  }
-                >
-                  <div className="employee-column employee-name">
-                    <strong>
-                      {employee.full_name}
-                    </strong>
+              employeesInWeek.map(
+                (employee) => (
+                  <div
+                    className="calendar-row"
+                    key={
+                      employee.id ||
+                      employee.employee_number ||
+                      employee.full_name
+                    }
+                  >
+                    <div className="employee-column employee-name">
+                      <strong>
+                        {employee.full_name}
+                      </strong>
 
-                    {employee.employee_number && (
-                      <span>
-                        {employee.employee_number}
-                      </span>
-                    )}
-                  </div>
+                      {employee.employee_number && (
+                        <span>
+                          {employee.employee_number}
+                        </span>
+                      )}
+                    </div>
 
-                  {weekDays.map((day) => {
-                    const dayShifts =
-                      weekShifts.filter(
-                        (s) =>
-                          s.date === day &&
-                          s.profiles?.id ===
-                            employee.id
+                    {weekDays.map((day) => {
+                      const dayShifts =
+                        weekShifts.filter(
+                          (s) =>
+                            s.date === day &&
+                            s.profiles?.id ===
+                              employee.id
+                        );
+
+                      return (
+                        <div
+                          className="day-column shift-cell"
+                          key={`${employee.id}-${day}`}
+                        >
+                          {dayShifts.map(
+                            (shift) => (
+                              <div
+                                className={`shift-card ${shift.status}`}
+                                key={shift.id}
+                                title={`${employee.full_name} • ${shift.start_time.slice(
+                                  0,
+                                  5
+                                )}–${shift.end_time.slice(
+                                  0,
+                                  5
+                                )} • ${
+                                  shift.locations?.name ||
+                                  '-'
+                                }`}
+                              >
+                                <strong>
+                                  {shift.start_time.slice(
+                                    0,
+                                    5
+                                  )}
+                                  –
+                                  {shift.end_time.slice(
+                                    0,
+                                    5
+                                  )}
+                                </strong>
+
+                                <span>
+                                  {shift.locations?.name ||
+                                    '-'}
+                                </span>
+
+                                <small>
+                                  {statusText(
+                                    shift.status
+                                  )}
+                                </small>
+                              </div>
+                            )
+                          )}
+                        </div>
                       );
-
-                    return (
-                      <div
-                        className="day-column shift-cell"
-                        key={`${employee.id}-${day}`}
-                      >
-                        {dayShifts.map(
-                          (shift) => (
-                            <div
-                              className={`shift-card ${shift.status}`}
-                              key={shift.id}
-                              title={`${employee.full_name} • ${shift.start_time.slice(
-                                0,
-                                5
-                              )}–${shift.end_time.slice(
-                                0,
-                                5
-                              )} • ${
-                                shift.locations?.name ||
-                                '-'
-                              }`}
-                            >
-                              <strong>
-                                {shift.start_time.slice(
-                                  0,
-                                  5
-                                )}
-                                –
-                                {shift.end_time.slice(
-                                  0,
-                                  5
-                                )}
-                              </strong>
-
-                              <span>
-                                {shift.locations?.name ||
-                                  '-'}
-                              </span>
-
-                              <small>
-                                {statusText(
-                                  shift.status
-                                )}
-                              </small>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))
+                    })}
+                  </div>
+                )
+              )
             )}
           </div>
         </section>
 
+        {/* TÜM PLANLAR */}
         <div className="card table-card">
           <div className="table-wrap">
             <table>
@@ -1063,6 +1325,7 @@ function AdminPanel({ profile, onLogout }) {
             </div>
           )}
         </div>
+
       </div>
     </main>
   );
