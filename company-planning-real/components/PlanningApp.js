@@ -5,14 +5,174 @@ import { createClient } from '../lib/supabase';
 
 const supabase = createClient();
 
+const LANGUAGES = {
+  tr: { label: 'Türkçe', flag: '🇹🇷' },
+  nl: { label: 'Nederlands', flag: '🇳🇱' },
+  en: { label: 'English', flag: '🇬🇧' },
+};
+
+const translations = {
+  tr: {
+    loading: 'Yükleniyor...', profileLoading: 'Profil yükleniyor...',
+    login: 'GİRİŞ', signup: 'YENİ HESAP', welcome: 'Hoş geldin.',
+    createAccount: 'Hesap oluştur.', loginDesc: 'Planning sistemine giriş yap.',
+    signupDesc: 'Çalışan hesabını oluştur.', name: 'İsim Soyisim',
+    phone: 'Telefon numarası', emailOrPhone: 'E-posta veya telefon numarası',
+    email: 'E-posta', password: 'Şifre', wait: 'Bekleyin...',
+    loginBtn: 'GİRİŞ YAP →', signupBtn: 'HESAP OLUŞTUR →',
+    phonePlaceholder: '+31 6 12345678', passwordPlaceholder: 'En az 6 karakter',
+    createPrompt: 'İlk kez mi kullanıyorsun? Hesap oluştur',
+    loginPrompt: 'Zaten hesabın var mı? Giriş yap',
+    invalidPhone: 'Lütfen telefon numaranı gir.',
+    accountCreated: 'Hesap oluşturuldu. E-posta doğrulaması açıksa gelen kutunu kontrol et.',
+    phoneNotFound: 'Bu telefon numarasıyla kayıtlı bir hesap bulunamadı.',
+    employee: 'Çalışan', admin: 'Yönetici', logout: 'Çıkış',
+    employeePanel: 'ÇALIŞAN PANELİ', requestsTitle: 'Çalışma Taleplerim',
+    employeeHero: 'Çalışma taleplerin.',
+    employeeDesc: 'Yöneticinin gönderdiği çalışma taleplerini buradan görüntüleyip cevaplayabilirsin.',
+    requestsLoading: 'Talepler yükleniyor...', noRequests: 'Şu anda bekleyen veya geçmiş bir çalışma talebin yok.',
+    accepted: 'Çalışabilirim', rejected: 'Çalışamam', pendingResponse: 'Cevap bekleniyor',
+    approved: 'Onaylandı', rejectedStatus: 'Reddedildi', pending: 'Bekliyor',
+    adminPanel: 'YÖNETİCİ PANELİ', planning: 'Planning',
+    adminDesc: 'Şirketin bütün çalışma planlarını yönet.', csv: 'CSV İNDİR',
+    totalPlans: 'Toplam plan', employees: 'Çalışan', totalHours: 'Toplam saat',
+    personnel: 'PERSONEL', employeesTitle: 'Çalışanlar',
+    employeesDesc: 'Şirket çalışanlarını, iletişim bilgilerini ve toplam çalışma saatlerini görüntüle.',
+    searchEmployee: 'İsim, personel no, e-posta veya telefon ara...',
+    noEmployee: 'Aramanıza uygun çalışan bulunamadı.',
+    employeeNo: 'Personel No', totalHour: 'Toplam Saat',
+    newRequest: 'YENİ TALEP', sendRequest: 'Çalışma Talebi Gönder',
+    sendRequestDesc: 'Bir çalışana belirli tarih, saat ve şehir için çalışma talebi gönder.',
+    chooseEmployee: 'Çalışan seçin', date: 'Tarih', start: 'Başlangıç', end: 'Bitiş',
+    city: 'Şehir', chooseCity: 'Şehir seçin', note: 'Not', optional: 'İsteğe bağlı',
+    sendRequestBtn: 'ÇALIŞMA TALEBİ GÖNDER →', sending: 'Gönderiliyor...',
+    requestSent: '✓ Çalışma talebi başarıyla gönderildi.',
+    fillFields: 'Lütfen çalışan, tarih, saat ve şehir alanlarını doldurun.',
+    endAfterStart: 'Bitiş saati başlangıç saatinden sonra olmalıdır.',
+    filters: 'TÜM PLANLAR', allPlaces: 'Tüm yerler',
+    searchShort: 'Çalışan veya personel no ara...',
+    weekly: 'HAFTALIK PLANNING', previous: '← Önceki', thisWeek: 'Bu hafta', next: 'Sonraki →',
+    noWeekPlans: 'Bu haftada plan bulunmuyor.', worker: 'ÇALIŞAN', hour: 'saat',
+    status: 'Durum', place: 'Yer', delete: 'Sil', noFiltered: 'Bu filtrelere uyan plan yok.',
+    employeeDetail: 'ÇALIŞAN DETAYI', noEmp: 'EMP numarası yok', close: 'Kapat',
+    upcoming: 'YAKLAŞAN VARDİYALAR', planned: 'Planlanan çalışmalar',
+    noUpcoming: 'Yaklaşan vardiya bulunmuyor.', emailLabel: 'E-posta', phoneLabel: 'Telefon',
+    thisMonth: 'Bu ay',
+  },
+  nl: {
+    loading: 'Laden...', profileLoading: 'Profiel laden...', login: 'INLOGGEN', signup: 'NIEUW ACCOUNT',
+    welcome: 'Welkom.', createAccount: 'Account aanmaken.', loginDesc: 'Log in op het planningssysteem.',
+    signupDesc: 'Maak je medewerkersaccount aan.', name: 'Voor- en achternaam', phone: 'Telefoonnummer',
+    emailOrPhone: 'E-mail of telefoonnummer', email: 'E-mail', password: 'Wachtwoord', wait: 'Even geduld...',
+    loginBtn: 'INLOGGEN →', signupBtn: 'ACCOUNT AANMAKEN →', phonePlaceholder: '+31 6 12345678',
+    passwordPlaceholder: 'Minimaal 6 tekens', createPrompt: 'Nieuw? Account aanmaken',
+    loginPrompt: 'Heb je al een account? Inloggen', invalidPhone: 'Voer je telefoonnummer in.',
+    accountCreated: 'Account aangemaakt. Controleer je inbox als e-mailverificatie is ingeschakeld.',
+    phoneNotFound: 'Geen account gevonden met dit telefoonnummer.', employee: 'Medewerker', admin: 'Beheerder',
+    logout: 'Uitloggen', employeePanel: 'MEDEWERKERSPANEEL', requestsTitle: 'Mijn werkverzoeken',
+    employeeHero: 'Je werkverzoeken.', employeeDesc: 'Bekijk en beantwoord hier werkverzoeken van je manager.',
+    requestsLoading: 'Verzoeken laden...', noRequests: 'Je hebt momenteel geen openstaande of eerdere werkverzoeken.',
+    accepted: 'Ik kan werken', rejected: 'Ik kan niet werken', pendingResponse: 'Wachten op antwoord',
+    approved: 'Goedgekeurd', rejectedStatus: 'Afgewezen', pending: 'In afwachting',
+    adminPanel: 'BEHEERPANEEL', planning: 'Planning', adminDesc: 'Beheer alle werkplanningen van het bedrijf.',
+    csv: 'CSV DOWNLOADEN', totalPlans: 'Totaal plannen', employees: 'Medewerkers', totalHours: 'Totaal uren',
+    personnel: 'PERSONEEL', employeesTitle: 'Medewerkers',
+    employeesDesc: 'Bekijk medewerkers, contactgegevens en totale gewerkte uren.',
+    searchEmployee: 'Zoek op naam, personeelsnummer, e-mail of telefoon...',
+    noEmployee: 'Geen medewerker gevonden voor deze zoekopdracht.', employeeNo: 'Personeelsnr.',
+    totalHour: 'Totaal uren', newRequest: 'NIEUW VERZOEK', sendRequest: 'Werkverzoek versturen',
+    sendRequestDesc: 'Stuur een medewerker een werkverzoek voor een datum, tijd en stad.',
+    chooseEmployee: 'Kies medewerker', date: 'Datum', start: 'Start', end: 'Einde',
+    city: 'Stad', chooseCity: 'Kies stad', note: 'Notitie', optional: 'Optioneel',
+    sendRequestBtn: 'WERKVERZOEK VERSTUREN →', sending: 'Versturen...',
+    requestSent: '✓ Werkverzoek succesvol verstuurd.', fillFields: 'Vul medewerker, datum, tijd en stad in.',
+    endAfterStart: 'De eindtijd moet na de starttijd liggen.', filters: 'ALLE PLANNEN',
+    allPlaces: 'Alle locaties', searchShort: 'Zoek medewerker of personeelsnummer...',
+    weekly: 'WEKELIJKSE PLANNING', previous: '← Vorige', thisWeek: 'Deze week', next: 'Volgende →',
+    noWeekPlans: 'Geen planning voor deze week.', worker: 'MEDEWERKER', hour: 'uur', status: 'Status',
+    place: 'Locatie', delete: 'Verwijderen', noFiltered: 'Geen plannen voor deze filters.',
+    employeeDetail: 'MEDEWERKERDETAIL', noEmp: 'Geen personeelsnummer', close: 'Sluiten',
+    upcoming: 'KOMENDE DIENSTEN', planned: 'Geplande diensten', noUpcoming: 'Geen komende diensten.',
+    emailLabel: 'E-mail', phoneLabel: 'Telefoon', thisMonth: 'Deze maand',
+  },
+  en: {
+    loading: 'Loading...', profileLoading: 'Loading profile...', login: 'LOGIN', signup: 'NEW ACCOUNT',
+    welcome: 'Welcome.', createAccount: 'Create an account.', loginDesc: 'Sign in to the planning system.',
+    signupDesc: 'Create your employee account.', name: 'Full name', phone: 'Phone number',
+    emailOrPhone: 'Email or phone number', email: 'Email', password: 'Password', wait: 'Please wait...',
+    loginBtn: 'LOG IN →', signupBtn: 'CREATE ACCOUNT →', phonePlaceholder: '+31 6 12345678',
+    passwordPlaceholder: 'At least 6 characters', createPrompt: 'New here? Create an account',
+    loginPrompt: 'Already have an account? Log in', invalidPhone: 'Please enter your phone number.',
+    accountCreated: 'Account created. Check your inbox if email verification is enabled.',
+    phoneNotFound: 'No account was found with this phone number.', employee: 'Employee', admin: 'Administrator',
+    logout: 'Log out', employeePanel: 'EMPLOYEE PANEL', requestsTitle: 'My Work Requests',
+    employeeHero: 'Your work requests.', employeeDesc: 'View and respond to work requests from your manager here.',
+    requestsLoading: 'Loading requests...', noRequests: 'You currently have no pending or previous work requests.',
+    accepted: 'I can work', rejected: 'I cannot work', pendingResponse: 'Awaiting response',
+    approved: 'Approved', rejectedStatus: 'Rejected', pending: 'Pending', adminPanel: 'ADMIN PANEL',
+    planning: 'Planning', adminDesc: 'Manage all company work schedules.', csv: 'DOWNLOAD CSV',
+    totalPlans: 'Total plans', employees: 'Employees', totalHours: 'Total hours', personnel: 'PERSONNEL',
+    employeesTitle: 'Employees', employeesDesc: 'View employees, contact details and total working hours.',
+    searchEmployee: 'Search name, employee no., email or phone...', noEmployee: 'No employee found.',
+    employeeNo: 'Employee No.', totalHour: 'Total Hours', newRequest: 'NEW REQUEST',
+    sendRequest: 'Send Work Request', sendRequestDesc: 'Send an employee a work request for a specific date, time and city.',
+    chooseEmployee: 'Choose employee', date: 'Date', start: 'Start', end: 'End', city: 'City',
+    chooseCity: 'Choose city', note: 'Note', optional: 'Optional', sendRequestBtn: 'SEND WORK REQUEST →',
+    sending: 'Sending...', requestSent: '✓ Work request sent successfully.',
+    fillFields: 'Please fill in employee, date, time and city.', endAfterStart: 'End time must be after start time.',
+    filters: 'ALL PLANS', allPlaces: 'All locations', searchShort: 'Search employee or employee no...',
+    weekly: 'WEEKLY PLANNING', previous: '← Previous', thisWeek: 'This week', next: 'Next →',
+    noWeekPlans: 'No plans this week.', worker: 'EMPLOYEE', hour: 'hours', status: 'Status',
+    place: 'Location', delete: 'Delete', noFiltered: 'No plans match these filters.',
+    employeeDetail: 'EMPLOYEE DETAILS', noEmp: 'No employee number', close: 'Close',
+    upcoming: 'UPCOMING SHIFTS', planned: 'Scheduled work', noUpcoming: 'No upcoming shifts.',
+    emailLabel: 'Email', phoneLabel: 'Phone', thisMonth: 'This month',
+  },
+};
+
+const getInitialLanguage = () => {
+  if (typeof window === 'undefined') return 'tr';
+  return localStorage.getItem('planning-language') || 'tr';
+};
+
+const translateStatus = (s, lang) => {
+  const t = translations[lang] || translations.tr;
+  return s === 'approved' ? t.approved : s === 'rejected' ? t.rejectedStatus : t.pending;
+};
+
+const translateDayNames = (lang) => {
+  if (lang === 'nl') return ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
+  if (lang === 'en') return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+};
+
+function LanguageSelector({ language, onChange }) {
+  return (
+    <div style={{ position: 'absolute', top: '18px', right: '18px', zIndex: 20 }}>
+      <select
+        value={language}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label="Language"
+        style={{
+          border: '1px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: '9px 12px',
+          background: '#fff',
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
+        {Object.entries(LANGUAGES).map(([code, item]) => (
+          <option key={code} value={code}>{item.flag} {item.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 const today = () => new Date().toISOString().slice(0, 10);
 
-const statusText = (s) =>
-  s === 'approved'
-    ? 'Onaylandı'
-    : s === 'rejected'
-      ? 'Reddedildi'
-      : 'Bekliyor';
+const statusText = (s, lang = 'tr') => translateStatus(s, lang);
 
 const duration = (a, b) => {
   if (!a || !b) return 0;
@@ -46,8 +206,9 @@ const normalizeText = (value) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
-const formatDate = (date) => {
-  return new Date(`${date}T12:00:00`).toLocaleDateString('tr-TR', {
+const formatDate = (date, lang = 'tr') => {
+  const locale = lang === 'nl' ? 'nl-NL' : lang === 'en' ? 'en-GB' : 'tr-TR';
+  return new Date(`${date}T12:00:00`).toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
   });
@@ -82,6 +243,7 @@ export default function PlanningApp() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [language, setLanguage] = useState(getInitialLanguage);
 
   useEffect(() => {
     let mounted = true;
@@ -103,7 +265,7 @@ export default function PlanningApp() {
     async function loadProfile(id) {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id,full_name,role,employee_number')
+        .select('id,full_name,role,employee_number,language')
         .eq('id', id)
         .single();
 
@@ -114,6 +276,10 @@ export default function PlanningApp() {
       }
 
       setProfile(data);
+      if (data.language && LANGUAGES[data.language]) {
+        setLanguage(data.language);
+        localStorage.setItem('planning-language', data.language);
+      }
       setLoading(false);
     }
 
@@ -144,25 +310,25 @@ export default function PlanningApp() {
   }
 
   if (loading) {
-    return <div className="loading">Yükleniyor...</div>;
+    return <div className="loading">{translations[language].loading}</div>;
   }
 
   if (!session) {
-    return <AuthScreen />;
+    return <AuthScreen language={language} setLanguage={setLanguage} />;
   }
 
   if (!profile) {
-    return <div className="loading">Profil yükleniyor...</div>;
+    return <div className="loading">{translations[language].profileLoading}</div>;
   }
 
   if (profile.role === 'admin') {
-    return <AdminPanel profile={profile} onLogout={logout} />;
+    return <AdminPanel profile={profile} onLogout={logout} language={language} setLanguage={setLanguage} />;
   }
 
-  return <EmployeePanel profile={profile} onLogout={logout} />;
+  return <EmployeePanel profile={profile} onLogout={logout} language={language} setLanguage={setLanguage} />;
 }
 
-function AuthScreen() {
+function AuthScreen({ language, setLanguage }) {
   const [mode, setMode] = useState('login');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -170,6 +336,12 @@ function AuthScreen() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const t = translations[language] || translations.tr;
+
+  function changeLanguage(next) {
+    setLanguage(next);
+    localStorage.setItem('planning-language', next);
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -196,7 +368,7 @@ function AuthScreen() {
       }
 
       if (!cleanPhone) {
-        setMessage('Lütfen telefon numaranı gir.');
+        setMessage(t.invalidPhone);
         setBusy(false);
         return;
       }
@@ -208,6 +380,7 @@ function AuthScreen() {
           data: {
             full_name: fullName.trim(),
             phone: cleanPhone,
+            language,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -222,6 +395,7 @@ function AuthScreen() {
             full_name: fullName.trim(),
             email: email.trim(),
             phone: cleanPhone,
+            language,
           })
           .eq('id', data.user.id);
 
@@ -281,7 +455,8 @@ function AuthScreen() {
   }
 
   return (
-    <main className="auth-page">
+    <main className="auth-page" style={{ position: 'relative' }}>
+      <LanguageSelector language={language} onChange={changeLanguage} />
       <div className="auth-card">
         <div className="logo">
           COMPANY <span>PLANNING</span>
@@ -316,21 +491,19 @@ function AuthScreen() {
 
           {mode === 'signup' && (
             <label>
-              Telefon numarası
+              {t.phone}
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
-                placeholder="+31 6 12345678"
+                placeholder={t.phonePlaceholder}
               />
             </label>
           )}
 
           <label>
-            {mode === 'login'
-              ? 'E-posta veya telefon numarası'
-              : 'E-posta'}
+            {mode === 'login' ? t.emailOrPhone : t.email}
             <input
               type={mode === 'login' ? 'text' : 'email'}
               value={email}
@@ -345,23 +518,23 @@ function AuthScreen() {
           </label>
 
           <label>
-            Şifre
+            {t.password}
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength="6"
-              placeholder="En az 6 karakter"
+              placeholder={t.passwordPlaceholder}
             />
           </label>
 
           <button className="primary" disabled={busy}>
             {busy
-              ? 'Bekleyin...'
+              ? t.wait
               : mode === 'login'
-                ? 'GİRİŞ YAP →'
-                : 'HESAP OLUŞTUR →'}
+                ? t.loginBtn
+                : t.signupBtn}
           </button>
         </form>
 
@@ -383,12 +556,14 @@ function AuthScreen() {
   );
 }
 
-function Header({ name, employeeNumber, role, onLogout }) {
+function Header({ name, employeeNumber, role, onLogout, language, setLanguage }) {
   return (
-    <header className="topbar">
+    <header className="topbar" style={{ position: 'relative' }}>
       <div className="logo">
         COMPANY <span>PLANNING</span>
       </div>
+
+      <LanguageSelector language={language} onChange={setLanguage} />
 
       <div className="user">
         <span>
@@ -399,16 +574,28 @@ function Header({ name, employeeNumber, role, onLogout }) {
           <small>{role}</small>
         </span>
 
-        <button onClick={onLogout}>Çıkış</button>
+        <button onClick={onLogout}>{translations[language]?.logout || 'Çıkış'}</button>
       </div>
     </header>
   );
 }
 
-function EmployeePanel({ profile, onLogout }) {
+function EmployeePanel({ profile, onLogout, language, setLanguage }) {
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [message, setMessage] = useState('');
+  const t = translations[language] || translations.tr;
+
+  useEffect(() => {
+    localStorage.setItem('planning-language', language);
+    if (profile?.id) {
+      supabase
+        .from('profiles')
+        .update({ language })
+        .eq('id', profile.id)
+        .then(({ error }) => error && console.error(error));
+    }
+  }, [language, profile?.id]);
 
   async function loadRequests() {
     setLoadingRequests(true);
@@ -488,9 +675,9 @@ function EmployeePanel({ profile, onLogout }) {
   }
 
   function requestStatusText(status) {
-    if (status === 'accepted') return 'Çalışabilirim';
-    if (status === 'rejected') return 'Çalışamam';
-    return 'Cevap bekleniyor';
+    if (status === 'accepted') return t.accepted;
+    if (status === 'rejected') return t.rejected;
+    return t.pendingResponse;
   }
 
   return (
@@ -498,19 +685,20 @@ function EmployeePanel({ profile, onLogout }) {
       <Header
         name={profile.full_name}
         employeeNumber={profile.employee_number}
-        role="Çalışan"
+        role={translations[language].employee}
         onLogout={onLogout}
+        language={language}
+        setLanguage={setLanguage}
       />
 
       <div className="content">
         <div className="hero">
-          <p className="eyebrow">ÇALIŞAN PANELİ</p>
+          <p className="eyebrow">{t.employeePanel}</p>
 
-          <h1>Çalışma taleplerin.</h1>
+          <h1>{t.employeeHero}</h1>
 
           <p className="muted">
-            Yöneticinin gönderdiği çalışma taleplerini buradan
-            görüntüleyip cevaplayabilirsin.
+            {t.employeeDesc}
           </p>
         </div>
 
@@ -524,13 +712,13 @@ function EmployeePanel({ profile, onLogout }) {
         )}
 
         <section className="card">
-          <h2>Çalışma Taleplerim</h2>
+          <h2>{t.requestsTitle}</h2>
 
           {loadingRequests ? (
-            <p className="muted">Talepler yükleniyor...</p>
+            <p className="muted">{t.requestsLoading}</p>
           ) : !requests.length ? (
             <p className="muted">
-              Şu anda bekleyen veya geçmiş bir çalışma talebin yok.
+              {t.noRequests}
             </p>
           ) : (
             <div className="mini-list">
@@ -563,7 +751,7 @@ function EmployeePanel({ profile, onLogout }) {
 
                     {request.note && (
                       <span>
-                        Not: {request.note}
+                        {t.note}: {request.note}
                       </span>
                     )}
                   </div>
@@ -608,7 +796,7 @@ function EmployeePanel({ profile, onLogout }) {
                             )
                           }
                         >
-                          Çalışabilirim
+                          {t.accepted}
                         </button>
 
                         <button
@@ -620,7 +808,7 @@ function EmployeePanel({ profile, onLogout }) {
                             )
                           }
                         >
-                          Çalışamam
+                          {t.rejected}
                         </button>
                       </div>
                     )}
@@ -635,7 +823,7 @@ function EmployeePanel({ profile, onLogout }) {
   );
 }
 
-function AdminPanel({ profile, onLogout }) {
+function AdminPanel({ profile, onLogout, language, setLanguage }) {
   const [shifts, setShifts] = useState([]);
   const [locations, setLocations] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -659,6 +847,12 @@ function AdminPanel({ profile, onLogout }) {
   const [requestNote, setRequestNote] = useState('');
   const [requestBusy, setRequestBusy] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
+  const t = translations[language] || translations.tr;
+
+  useEffect(() => {
+    localStorage.setItem('planning-language', language);
+    if (profile?.id) supabase.from('profiles').update({ language }).eq('id', profile.id).then(({ error }) => error && console.error(error));
+  }, [language, profile?.id]);
 
   async function load() {
     const [
@@ -931,7 +1125,7 @@ function AdminPanel({ profile, onLogout }) {
         s.start_time.slice(0, 5),
         s.end_time.slice(0, 5),
         s.locations?.name || '',
-        statusText(s.status),
+        statusText(s.status, language),
       ]),
     ];
 
@@ -979,17 +1173,17 @@ function AdminPanel({ profile, onLogout }) {
 
   const employeeCount = employees.length;
 
-  const weekTitle = `${formatDate(
-    weekDays[0]
-  )} – ${formatDate(weekDays[6])}`;
+  const weekTitle = `${formatDate(weekDays[0], language)} – ${formatDate(weekDays[6], language)}`;
 
   return (
     <main className="page">
       <Header
         name={profile.full_name}
         employeeNumber={profile.employee_number}
-        role="Yönetici"
+        role={translations[language].admin}
         onLogout={onLogout}
+        language={language}
+        setLanguage={setLanguage}
       />
 
       <div className="content">
@@ -1004,7 +1198,7 @@ function AdminPanel({ profile, onLogout }) {
             <h1>Planning</h1>
 
             <p className="muted">
-              Şirketin bütün çalışma planlarını yönet.
+              {t.adminDesc}
             </p>
           </div>
 
@@ -1012,24 +1206,24 @@ function AdminPanel({ profile, onLogout }) {
             className="secondary"
             onClick={exportCsv}
           >
-            CSV İNDİR
+            {t.csv}
           </button>
         </div>
 
         {/* İSTATİSTİKLER */}
         <div className="stats">
           <div className="stat">
-            <span>Toplam plan</span>
+            <span>{t.totalPlans}</span>
             <strong>{shifts.length}</strong>
           </div>
 
           <div className="stat">
-            <span>Çalışan</span>
+            <span>{t.employees}</span>
             <strong>{employeeCount}</strong>
           </div>
 
           <div className="stat">
-            <span>Toplam saat</span>
+            <span>{t.totalHours}</span>
             <strong>{total.toFixed(1)}</strong>
           </div>
         </div>
@@ -1041,16 +1235,16 @@ function AdminPanel({ profile, onLogout }) {
         >
           <div style={{ marginBottom: '20px' }}>
             <p className="eyebrow">
-              PERSONEL
+              {t.personnel}
             </p>
 
             <h2 style={{ marginBottom: '8px' }}>
-              Çalışanlar
+              {t.employeesTitle}
             </h2>
 
             <p className="muted">
               Şirket çalışanlarını, iletişim bilgilerini
-              ve toplam çalışma saatlerini görüntüle.
+              {t.employeesDesc}
             </p>
           </div>
 
@@ -1065,7 +1259,7 @@ function AdminPanel({ profile, onLogout }) {
 
           {!filteredEmployees.length ? (
             <div className="empty">
-              Aramanıza uygun çalışan bulunamadı.
+              {t.noEmployee}
             </div>
           ) : (
             <div className="table-wrap">
@@ -1076,11 +1270,11 @@ function AdminPanel({ profile, onLogout }) {
               >
                 <thead>
                   <tr>
-                    <th>Personel No</th>
-                    <th>Çalışan</th>
+                    <th>{t.employeeNo}</th>
+                    <th>{t.employee}</th>
                     <th>E-posta</th>
                     <th>Telefon</th>
-                    <th>Toplam Saat</th>
+                    <th>{t.totalHour}</th>
                   </tr>
                 </thead>
 
@@ -1126,16 +1320,15 @@ function AdminPanel({ profile, onLogout }) {
         >
           <div style={{ marginBottom: '20px' }}>
             <p className="eyebrow">
-              YENİ TALEP
+              {t.newRequest}
             </p>
 
             <h2 style={{ marginBottom: '8px' }}>
-              Çalışma Talebi Gönder
+              {t.sendRequest}
             </h2>
 
             <p className="muted">
-              Bir çalışana belirli tarih, saat ve şehir
-              için çalışma talebi gönder.
+              {t.sendRequestDesc}
             </p>
           </div>
 
@@ -1154,7 +1347,7 @@ function AdminPanel({ profile, onLogout }) {
                 required
               >
                 <option value="">
-                  Çalışan seçin
+                  {t.employee} seçin
                 </option>
 
                 {employees.map((employee) => (
@@ -1199,7 +1392,7 @@ function AdminPanel({ profile, onLogout }) {
               </label>
 
               <label>
-                Bitiş
+                {t.end}
 
                 <input
                   type="time"
@@ -1213,7 +1406,7 @@ function AdminPanel({ profile, onLogout }) {
             </div>
 
             <label>
-              Şehir
+              {t.city}
 
               <select
                 value={requestLocation}
@@ -1223,7 +1416,7 @@ function AdminPanel({ profile, onLogout }) {
                 required
               >
                 <option value="">
-                  Şehir seçin
+                  {t.chooseCity}
                 </option>
 
                 {locations.map((l) => (
@@ -1247,7 +1440,7 @@ function AdminPanel({ profile, onLogout }) {
                   fontSize: '12px',
                 }}
               >
-                İsteğe bağlı
+                {t.optional}
               </span>
 
               <input
@@ -1265,8 +1458,8 @@ function AdminPanel({ profile, onLogout }) {
               disabled={requestBusy}
             >
               {requestBusy
-                ? 'Gönderiliyor...'
-                : 'ÇALIŞMA TALEBİ GÖNDER →'}
+                ? t.sending
+                : t.sendRequestBtn}
             </button>
 
             {requestMessage && (
@@ -1302,7 +1495,7 @@ function AdminPanel({ profile, onLogout }) {
             }
           >
             <option value="">
-              Tüm yerler
+              {t.allPlaces}
             </option>
 
             {locations.map((l) => (
@@ -1334,14 +1527,14 @@ function AdminPanel({ profile, onLogout }) {
                   changeWeek(-1)
                 }
               >
-                ← Önceki
+                {t.previous}
               </button>
 
               <button
                 className="secondary"
                 onClick={goToCurrentWeek}
               >
-                Bu hafta
+                {t.thisWeek}
               </button>
 
               <button
@@ -1350,7 +1543,7 @@ function AdminPanel({ profile, onLogout }) {
                   changeWeek(1)
                 }
               >
-                Sonraki →
+                {t.next}
               </button>
             </div>
           </div>
@@ -1358,7 +1551,7 @@ function AdminPanel({ profile, onLogout }) {
           <div className="planning-calendar">
             <div className="calendar-row calendar-days">
               <div className="employee-column">
-                ÇALIŞAN
+                {t.worker}
               </div>
 
               {weekDays.map(
@@ -1368,7 +1561,7 @@ function AdminPanel({ profile, onLogout }) {
                     key={day}
                   >
                     <strong>
-                      {dayNames[index]}
+                      {translateDayNames(language)[index]}
                     </strong>
 
                     <span>
@@ -1381,7 +1574,7 @@ function AdminPanel({ profile, onLogout }) {
 
             {!employeesInWeek.length ? (
               <div className="empty">
-                Bu haftada plan bulunmuyor.
+                {t.noWeekPlans}
               </div>
             ) : (
               employeesInWeek.map(
@@ -1547,7 +1740,7 @@ function AdminPanel({ profile, onLogout }) {
                           remove(s.id)
                         }
                       >
-                        Sil
+                        {t.delete}
                       </button>
                     </td>
                   </tr>
@@ -1558,7 +1751,7 @@ function AdminPanel({ profile, onLogout }) {
 
           {!filtered.length && (
             <div className="empty">
-              Bu filtrelere uyan plan yok.
+              {t.noFiltered}
             </div>
           )}
         </div>
@@ -1603,11 +1796,11 @@ function AdminPanel({ profile, onLogout }) {
                   right: '18px',
                 }}
               >
-                Kapat
+                {t.close}
               </button>
 
               <p className="eyebrow">
-                ÇALIŞAN DETAYI
+                {t.employeeDetail}
               </p>
 
               <h2
@@ -1633,13 +1826,13 @@ function AdminPanel({ profile, onLogout }) {
                 }}
               >
                 <div className="notice">
-                  <strong>📧 E-posta</strong>
+                  <strong>📧 {t.emailLabel}</strong>
                   <br />
                   {selectedEmployee.email || '-'}
                 </div>
 
                 <div className="notice">
-                  <strong>📱 Telefon</strong>
+                  <strong>📱 {t.phoneLabel}</strong>
                   <br />
                   {selectedEmployee.phone || '-'}
                 </div>
@@ -1652,7 +1845,7 @@ function AdminPanel({ profile, onLogout }) {
                 }}
               >
                 <div className="stat">
-                  <span>Bu hafta</span>
+                  <span>{t.thisWeek}</span>
                   <strong>
                     {shifts
                       .filter((shift) => {
@@ -1679,7 +1872,7 @@ function AdminPanel({ profile, onLogout }) {
                 </div>
 
                 <div className="stat">
-                  <span>Bu ay</span>
+                  <span>{t.thisMonth}</span>
                   <strong>
                     {shifts
                       .filter((shift) => {
@@ -1719,7 +1912,7 @@ function AdminPanel({ profile, onLogout }) {
                 }}
               >
                 <p className="eyebrow">
-                  YAKLAŞAN VARDİYALAR
+                  {t.upcoming}
                 </p>
 
                 <h2
@@ -1727,7 +1920,7 @@ function AdminPanel({ profile, onLogout }) {
                     marginTop: '6px',
                   }}
                 >
-                  Planlanan çalışmalar
+                  {t.planned}
                 </h2>
 
                 {shifts.filter(
@@ -1737,7 +1930,7 @@ function AdminPanel({ profile, onLogout }) {
                     shift.date >= today()
                 ).length === 0 ? (
                   <div className="empty">
-                    Yaklaşan vardiya bulunmuyor.
+                    {t.noUpcoming}
                   </div>
                 ) : (
                   <div className="mini-list">
