@@ -150,6 +150,7 @@ export default function PlanningApp() {
 function AuthScreen() {
   const [mode, setMode] = useState('login');
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -157,30 +158,86 @@ function AuthScreen() {
 
   async function submit(e) {
     e.preventDefault();
-
     setBusy(true);
     setMessage('');
 
     if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const cleanPhone = phone.trim();
+
+      if (!cleanPhone) {
+        setMessage('Lütfen telefon numaranı gir.');
+        setBusy(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
+            phone: cleanPhone,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
 
-      setMessage(
-        error
-          ? error.message
-          : 'Hesap oluşturuldu. E-posta doğrulaması açıksa gelen kutunu kontrol et.'
-      );
+      if (error) {
+        setMessage(error.message);
+      } else if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: fullName.trim(),
+            email: email.trim(),
+            phone: cleanPhone,
+          })
+          .eq('id', data.user.id);
+
+        if (profileError) {
+          console.error(profileError);
+          setMessage(
+            'Hesap oluşturuldu ancak profil bilgileri kaydedilemedi: ' +
+              profileError.message
+          );
+        } else {
+          setMessage(
+            'Hesap oluşturuldu. E-posta doğrulaması açıksa gelen kutunu kontrol et.'
+          );
+        }
+      }
     } else {
+      const loginValue = email.trim();
+      let loginEmail = loginValue;
+
+      if (!loginValue.includes('@')) {
+        const { data: phoneData, error: phoneError } =
+          await supabase.rpc('get_auth_email_by_phone', {
+            p_phone: loginValue,
+          });
+
+        if (phoneError) {
+          console.error(phoneError);
+          setMessage(
+            'Telefonla giriş ayarı bulunamadı. Yönetici Supabase SQL adımını tamamlamalı.'
+          );
+          setBusy(false);
+          return;
+        }
+
+        if (!phoneData) {
+          setMessage(
+            'Bu telefon numarasıyla kayıtlı bir hesap bulunamadı.'
+          );
+          setBusy(false);
+          return;
+        }
+
+        loginEmail = phoneData;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: loginEmail,
         password,
       });
 
@@ -226,14 +283,33 @@ function AuthScreen() {
             </label>
           )}
 
+          {mode === 'signup' && (
+            <label>
+              Telefon numarası
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                placeholder="+31 6 12345678"
+              />
+            </label>
+          )}
+
           <label>
-            E-posta
+            {mode === 'login'
+              ? 'E-posta veya telefon numarası'
+              : 'E-posta'}
             <input
-              type="email"
+              type={mode === 'login' ? 'text' : 'email'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="ahmet@company.com"
+              placeholder={
+                mode === 'login'
+                  ? 'ahmet@company.com veya +31 6 12345678'
+                  : 'ahmet@company.com'
+              }
             />
           </label>
 
@@ -408,7 +484,10 @@ function EmployeePanel({ profile, onLogout }) {
         </div>
 
         {message && (
-          <div className="notice" style={{ marginBottom: '18px' }}>
+          <div
+            className="notice"
+            style={{ marginBottom: '18px' }}
+          >
             {message}
           </div>
         )}
@@ -442,20 +521,28 @@ function EmployeePanel({ profile, onLogout }) {
                     </span>
 
                     <span>
-                      📍 {request.locations?.name || '-'}
+                      {request.locations?.name || '-'}
                     </span>
+
+                    {request.profiles?.full_name && (
+                      <span>
+                        Yönetici: {request.profiles.full_name}
+                      </span>
+                    )}
 
                     {request.note && (
                       <span>
-                        📝 {request.note}
+                        Not: {request.note}
                       </span>
                     )}
                   </div>
 
                   <div
                     style={{
-                      minWidth: '190px',
-                      textAlign: 'right',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
+                      gap: '8px',
                     }}
                   >
                     <em
@@ -466,13 +553,6 @@ function EmployeePanel({ profile, onLogout }) {
                             ? 'rejected'
                             : 'pending'
                       }
-                      style={{
-                        display: 'block',
-                        marginBottom:
-                          request.status === 'pending'
-                            ? '10px'
-                            : '0',
-                      }}
                     >
                       {requestStatusText(request.status)}
                     </em>
@@ -481,22 +561,9 @@ function EmployeePanel({ profile, onLogout }) {
                       <div
                         style={{
                           display: 'flex',
-                          justifyContent: 'flex-end',
                           gap: '8px',
                         }}
                       >
-                        <button
-                          className="secondary"
-                          onClick={() =>
-                            respondToRequest(
-                              request,
-                              'rejected'
-                            )
-                          }
-                        >
-                          Çalışamam
-                        </button>
-
                         <button
                           className="primary"
                           style={{
@@ -511,6 +578,18 @@ function EmployeePanel({ profile, onLogout }) {
                           }
                         >
                           Çalışabilirim
+                        </button>
+
+                        <button
+                          className="secondary"
+                          onClick={() =>
+                            respondToRequest(
+                              request,
+                              'rejected'
+                            )
+                          }
+                        >
+                          Çalışamam
                         </button>
                       </div>
                     )}
@@ -530,6 +609,7 @@ function AdminPanel({ profile, onLogout }) {
   const [employees, setEmployees] = useState([]);
 
   const [search, setSearch] = useState('');
+  const [employeeSearch, setEmployeeSearch] = useState('');
   const [date, setDate] = useState('');
   const [location, setLocation] = useState('');
 
@@ -568,7 +648,7 @@ function AdminPanel({ profile, onLogout }) {
 
       supabase
         .from('profiles')
-        .select('id,full_name,employee_number,role')
+        .select('id,full_name,email,phone,employee_number,role')
         .eq('role', 'employee')
         .order('full_name'),
     ]);
@@ -713,6 +793,49 @@ function AdminPanel({ profile, onLogout }) {
     });
   }, [shifts, search, date, location]);
 
+  const filteredEmployees = useMemo(() => {
+    const searchTerm = normalizeText(
+      employeeSearch.trim()
+    );
+
+    if (!searchTerm) {
+      return employees;
+    }
+
+    return employees.filter((employee) => {
+      const name = normalizeText(employee.full_name);
+      const number = normalizeText(
+        employee.employee_number
+      );
+      const email = normalizeText(employee.email);
+      const phone = normalizeText(employee.phone);
+
+      return (
+        name.includes(searchTerm) ||
+        number.includes(searchTerm) ||
+        email.includes(searchTerm) ||
+        phone.includes(searchTerm)
+      );
+    });
+  }, [employees, employeeSearch]);
+
+  function employeeTotalHours(employeeId) {
+    return shifts
+      .filter(
+        (shift) =>
+          shift.profiles?.id === employeeId
+      )
+      .reduce(
+        (total, shift) =>
+          total +
+          duration(
+            shift.start_time,
+            shift.end_time
+          ),
+        0
+      );
+  }
+
   const weekDays = useMemo(
     () => getWeekDays(weekStart),
     [weekStart]
@@ -783,8 +906,12 @@ function AdminPanel({ profile, onLogout }) {
       rows
         .map((r) =>
           r
-            .map((v) =>
-              `"${String(v).replaceAll('"', '""')}"`
+            .map(
+              (v) =>
+                `"${String(v).replaceAll(
+                  '"',
+                  '""'
+                )}"`
             )
             .join(';')
         )
@@ -814,11 +941,7 @@ function AdminPanel({ profile, onLogout }) {
     0
   );
 
-  const employeeCount = new Set(
-    shifts
-      .map((s) => s.profiles?.id)
-      .filter(Boolean)
-  ).size;
+  const employeeCount = employees.length;
 
   const weekTitle = `${formatDate(
     weekDays[0]
@@ -875,6 +998,99 @@ function AdminPanel({ profile, onLogout }) {
           </div>
         </div>
 
+        {/* ÇALIŞANLAR */}
+        <section
+          className="card"
+          style={{ marginBottom: '18px' }}
+        >
+          <div style={{ marginBottom: '20px' }}>
+            <p className="eyebrow">
+              PERSONEL
+            </p>
+
+            <h2 style={{ marginBottom: '8px' }}>
+              Çalışanlar
+            </h2>
+
+            <p className="muted">
+              Şirket çalışanlarını, iletişim bilgilerini
+              ve toplam çalışma saatlerini görüntüle.
+            </p>
+          </div>
+
+          <input
+            placeholder="İsim, personel no, e-posta veya telefon ara..."
+            value={employeeSearch}
+            onChange={(e) =>
+              setEmployeeSearch(e.target.value)
+            }
+            style={{ marginBottom: '16px' }}
+          />
+
+          {!filteredEmployees.length ? (
+            <div className="empty">
+              Aramanıza uygun çalışan bulunamadı.
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table
+                style={{
+                  minWidth: '900px',
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th>Personel No</th>
+                    <th>Çalışan</th>
+                    <th>E-posta</th>
+                    <th>Telefon</th>
+                    <th>Toplam Saat</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredEmployees.map(
+                    (employee) => (
+                      <tr key={employee.id}>
+                        <td>
+                          <span className="badge">
+                            {employee.employee_number ||
+                              '-'}
+                          </span>
+                        </td>
+
+                        <td>
+                          <strong>
+                            {employee.full_name ||
+                              'Bilinmiyor'}
+                          </strong>
+                        </td>
+
+                        <td>
+                          {employee.email || '-'}
+                        </td>
+
+                        <td>
+                          {employee.phone || '-'}
+                        </td>
+
+                        <td>
+                          <strong>
+                            {employeeTotalHours(
+                              employee.id
+                            ).toFixed(1)}
+                            {' saat'}
+                          </strong>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
         {/* ÇALIŞMA TALEBİ */}
         <section
           className="card"
@@ -907,7 +1123,9 @@ function AdminPanel({ profile, onLogout }) {
               <select
                 value={requestEmployee}
                 onChange={(e) =>
-                  setRequestEmployee(e.target.value)
+                  setRequestEmployee(
+                    e.target.value
+                  )
                 }
                 required
               >
@@ -937,7 +1155,9 @@ function AdminPanel({ profile, onLogout }) {
                 type="date"
                 value={requestDate}
                 onChange={(e) =>
-                  setRequestDate(e.target.value)
+                  setRequestDate(
+                    e.target.value
+                  )
                 }
                 required
               />
@@ -952,7 +1172,9 @@ function AdminPanel({ profile, onLogout }) {
                   type="time"
                   value={requestStart}
                   onChange={(e) =>
-                    setRequestStart(e.target.value)
+                    setRequestStart(
+                      e.target.value
+                    )
                   }
                   required
                 />
@@ -965,7 +1187,9 @@ function AdminPanel({ profile, onLogout }) {
                   type="time"
                   value={requestEnd}
                   onChange={(e) =>
-                    setRequestEnd(e.target.value)
+                    setRequestEnd(
+                      e.target.value
+                    )
                   }
                   required
                 />
@@ -979,7 +1203,9 @@ function AdminPanel({ profile, onLogout }) {
               <select
                 value={requestLocation}
                 onChange={(e) =>
-                  setRequestLocation(e.target.value)
+                  setRequestLocation(
+                    e.target.value
+                  )
                 }
                 required
               >
@@ -1001,6 +1227,7 @@ function AdminPanel({ profile, onLogout }) {
             {/* NOT */}
             <label>
               Not
+
               <span
                 style={{
                   fontWeight: 500,
@@ -1016,7 +1243,9 @@ function AdminPanel({ profile, onLogout }) {
                 placeholder="Örn. Sabah vardiyası için müsait misin?"
                 value={requestNote}
                 onChange={(e) =>
-                  setRequestNote(e.target.value)
+                  setRequestNote(
+                    e.target.value
+                  )
                 }
               />
             </label>
@@ -1231,7 +1460,6 @@ function AdminPanel({ profile, onLogout }) {
             )}
           </div>
         </section>
-
         {/* TÜM PLANLAR */}
         <div className="card table-card">
           <div className="table-wrap">
@@ -1253,15 +1481,13 @@ function AdminPanel({ profile, onLogout }) {
                   <tr key={s.id}>
                     <td>
                       <span className="badge">
-                        {s.profiles?.employee_number ||
-                          '-'}
+                        {s.profiles?.employee_number || '-'}
                       </span>
                     </td>
 
                     <td>
                       <strong>
-                        {s.profiles?.full_name ||
-                          'Bilinmiyor'}
+                        {s.profiles?.full_name || 'Bilinmiyor'}
                       </strong>
                     </td>
 
@@ -1306,9 +1532,7 @@ function AdminPanel({ profile, onLogout }) {
                     <td>
                       <button
                         className="delete"
-                        onClick={() =>
-                          remove(s.id)
-                        }
+                        onClick={() => remove(s.id)}
                       >
                         Sil
                       </button>
