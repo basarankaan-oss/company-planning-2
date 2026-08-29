@@ -385,6 +385,147 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
     .auth-page { padding: 28px 20px; }
     .auth-card { width: min(100%, 460px); }
 
+    .profile-menu-wrap {
+      position: relative;
+    }
+    .profile-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      padding: 6px 10px 6px 6px !important;
+      border-radius: 14px;
+      background: transparent;
+    }
+    .profile-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #172b4d;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+    .profile-trigger-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 0;
+    }
+    .profile-trigger-text strong {
+      max-width: 190px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .profile-trigger-text small {
+      color: #7b818a;
+      font-size: 11px;
+    }
+    .profile-chevron {
+      color: #7b818a;
+      font-size: 12px;
+    }
+    .profile-dropdown {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      width: 280px;
+      z-index: 1300;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 18px 50px rgba(21,35,59,.16);
+      overflow: hidden;
+    }
+    .profile-summary {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #eef0f3;
+    }
+    .profile-summary .profile-avatar {
+      width: 44px;
+      height: 44px;
+      font-size: 14px;
+    }
+    .profile-summary-text {
+      min-width: 0;
+    }
+    .profile-summary-text strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+    .profile-summary-text span {
+      display: block;
+      margin-top: 3px;
+      color: #7b818a;
+      font-size: 11px;
+    }
+    .profile-info {
+      padding: 8px 16px 12px;
+    }
+    .profile-info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 0;
+      font-size: 12px;
+      border-bottom: 1px solid #f2f3f5;
+    }
+    .profile-info-row:last-child {
+      border-bottom: 0;
+    }
+    .profile-info-row span:first-child {
+      color: #7b818a;
+    }
+    .profile-info-row span:last-child {
+      font-weight: 700;
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .profile-actions {
+      padding: 10px;
+      border-top: 1px solid #eef0f3;
+      display: grid;
+      gap: 6px;
+    }
+    .profile-action {
+      width: 100%;
+      justify-content: flex-start !important;
+      text-align: left;
+      padding: 10px 12px !important;
+      border-radius: 10px;
+    }
+    .profile-action.danger {
+      color: #b42318;
+    }
+    @media (max-width: 760px) {
+      .profile-trigger-text,
+      .profile-chevron {
+        display: none;
+      }
+      .profile-trigger {
+        padding: 4px !important;
+      }
+      .profile-dropdown {
+        position: fixed;
+        top: 70px;
+        right: 14px;
+        width: min(300px, calc(100vw - 28px));
+      }
+    }
+
     .notification-wrap {
       position: relative;
     }
@@ -932,6 +1073,17 @@ function AuthScreen({ language, setLanguage }) {
 }
 
 function Header({ name, employeeNumber, role, onLogout, language, setLanguage }) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const t = translations[language] || translations.tr;
+
+  const initials = (name || 'U')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+
   return (
     <header className="topbar" style={{ position: 'relative' }}>
       <CompanyBrand compact language={language} />
@@ -939,15 +1091,90 @@ function Header({ name, employeeNumber, role, onLogout, language, setLanguage })
       <LanguageSelector language={language} onChange={setLanguage} />
 
       <div className="user">
-        <span>
-          <strong>
-            {name}
-            {employeeNumber ? ` · ${employeeNumber}` : ''}
-          </strong>
-          <small>{role}</small>
-        </span>
+        <div className="profile-menu-wrap">
+          <button
+            type="button"
+            className="profile-trigger"
+            aria-expanded={profileOpen}
+            aria-label="Profil menüsü"
+            onClick={() => setProfileOpen((open) => !open)}
+          >
+            <span className="profile-avatar">{initials}</span>
 
-        <button onClick={onLogout}>{translations[language]?.logout || 'Çıkış'}</button>
+            <span className="profile-trigger-text">
+              <strong>{name}</strong>
+              <small>{role}</small>
+            </span>
+
+            <span className="profile-chevron">⌄</span>
+          </button>
+
+          {profileOpen && (
+            <div className="profile-dropdown">
+              <div className="profile-summary">
+                <span className="profile-avatar">{initials}</span>
+                <div className="profile-summary-text">
+                  <strong>{name}</strong>
+                  <span>{role}</span>
+                </div>
+              </div>
+
+              <div className="profile-info">
+                <div className="profile-info-row">
+                  <span>{t.employeeNo || 'Personel No'}</span>
+                  <span>{employeeNumber || '-'}</span>
+                </div>
+
+                <div className="profile-info-row">
+                  <span>Rol</span>
+                  <span>{role}</span>
+                </div>
+
+                <div className="profile-info-row">
+                  <span>Dil</span>
+                  <span>
+                    {LANGUAGES[language]?.flag} {LANGUAGES[language]?.label}
+                  </span>
+                </div>
+              </div>
+
+              <div className="profile-actions">
+                <button
+                  type="button"
+                  className="secondary profile-action"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    document.querySelector('.topbar')?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start',
+                    });
+                  }}
+                >
+                  👤 Profilim
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary profile-action"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    setLanguage(language);
+                  }}
+                >
+                  🌐 Dil: {LANGUAGES[language]?.label}
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary profile-action danger"
+                  onClick={onLogout}
+                >
+                  🚪 {t.logout || 'Çıkış'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
