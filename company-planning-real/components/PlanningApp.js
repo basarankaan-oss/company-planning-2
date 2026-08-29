@@ -1342,6 +1342,15 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
   const [message, setMessage] = useState('');
   const [newRequestCount, setNewRequestCount] = useState(0);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [employeeNotificationOpen, setEmployeeNotificationOpen] = useState(false);
+  const [employeeNotifications, setEmployeeNotifications] = useState([]);
+  const [readEmployeeNotificationIds, setReadEmployeeNotificationIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('supra_employee_read_notifications') || '[]');
+    } catch {
+      return [];
+    }
+  });
   const t = translations[language] || translations.tr;
 
   useEffect(() => {
@@ -1371,7 +1380,25 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
       console.error(error);
       setMessage(error.message);
     } else {
-      setRequests(data || []);
+      const rows = data || [];
+      setRequests(rows);
+
+      const responseItems = rows
+        .filter((request) => ['accepted', 'rejected'].includes(request.status) && request.responded_at)
+        .sort((a, b) => String(b.responded_at).localeCompare(String(a.responded_at)))
+        .slice(0, 30)
+        .map((request) => ({
+          id: `employee-request-response-${request.id}`,
+          type: request.status === 'rejected' ? 'error' : 'success',
+          title: request.status === 'rejected' ? 'İş / vardiya iptal edildi' : 'İş talebi kabul edildi',
+          message:
+            request.status === 'rejected'
+              ? `Yönetici bu işi iptal etti. ${request.date} • ${request.start_time?.slice(0, 5) || '--:--'} – ${request.end_time?.slice(0, 5) || '--:--'} • ${request.locations?.name || '-'}`
+              : `${request.date} • ${request.start_time?.slice(0, 5) || '--:--'} – ${request.end_time?.slice(0, 5) || '--:--'} • ${request.locations?.name || '-'} • Takvime eklendi`,
+          createdAt: request.responded_at,
+        }));
+
+      setEmployeeNotifications(responseItems);
     }
 
     setLoadingRequests(false);
@@ -1392,9 +1419,47 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
           table: 'shift_requests',
           filter: `employee_id=eq.${profile.id}`,
         },
-        () => {
+        (payload) => {
           setNewRequestCount((count) => count + 1);
           setNotificationMessage(t.newRequestNotification);
+          loadRequests();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'shift_requests',
+          filter: `employee_id=eq.${profile.id}`,
+        },
+        (payload) => {
+          const row = payload.new;
+          if (!row?.id || !['accepted', 'rejected'].includes(row.status)) return;
+
+          const isRejected = row.status === 'rejected';
+          const item = {
+            id: `employee-request-response-${row.id}`,
+            type: isRejected ? 'error' : 'success',
+            title: isRejected ? 'İş / vardiya iptal edildi' : 'İş talebi kabul edildi',
+            message: isRejected
+              ? `Yönetici bu işi iptal etti. ${row.date} • ${row.start_time?.slice(0, 5) || '--:--'} – ${row.end_time?.slice(0, 5) || '--:--'}`
+              : `${row.date} • ${row.start_time?.slice(0, 5) || '--:--'} – ${row.end_time?.slice(0, 5) || '--:--'} • Takvime eklendi`,
+            createdAt: row.responded_at || new Date().toISOString(),
+          };
+
+          setEmployeeNotifications((current) => [
+            item,
+            ...current.filter((notification) => notification.id !== item.id),
+          ].slice(0, 30));
+
+          setEmployeeNotificationOpen(true);
+          setNotificationMessage(
+            isRejected
+              ? '✕ Yönetici işi/vardiyayı iptal etti.'
+              : '✓ Yönetici iş talebini onayladı.'
+          );
+
           loadRequests();
         }
       )
@@ -1410,6 +1475,16 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
       requests.filter((request) => request.status === 'pending').length
     );
   }, [requests]);
+
+  // Realtime bağlantısı kaçırılırsa bile yönetici tarafından yapılan
+  // kabul/reddetme/iptal işlemlerini düzenli olarak kontrol et.
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      loadRequests();
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [profile.id]);
 
   async function respondToRequest(request, status) {
     setMessage('');
@@ -1447,6 +1522,24 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
   }
 
 
+  const unreadEmployeeNotificationCount = employeeNotifications.filter(
+    (item) => !readEmployeeNotificationIds.includes(item.id)
+  ).length;
+
+  const markEmployeeNotificationRead = (id) => {
+    setReadEmployeeNotificationIds((current) => {
+      const next = current.includes(id) ? current : [...current, id];
+      localStorage.setItem('supra_employee_read_notifications', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const markAllEmployeeNotificationsRead = () => {
+    const next = employeeNotifications.map((item) => item.id);
+    setReadEmployeeNotificationIds(next);
+    localStorage.setItem('supra_employee_read_notifications', JSON.stringify(next));
+  };
+
   function requestStatusText(status) {
     if (status === 'accepted') return t.accepted;
     if (status === 'rejected') return t.rejected;
@@ -1465,6 +1558,93 @@ function EmployeePanel({ profile, onLogout, language, setLanguage }) {
         language={language}
         setLanguage={setLanguage}
       />
+
+      <div
+        className="notification-wrap"
+        style={{
+          position: 'fixed',
+          top: '132px',
+          right: '32px',
+          zIndex: 2000,
+        }}
+      >
+        <button
+          className="secondary notification-button"
+          type="button"
+          aria-label="Bildirimler"
+          onClick={() => setEmployeeNotificationOpen((open) => !open)}
+        >
+          <span style={{ fontSize: '20px', lineHeight: 1 }}>🔔</span>
+          <span className="notification-button-label">Bildirimler</span>
+          {unreadEmployeeNotificationCount > 0 && (
+            <span className="notification-count">
+              {unreadEmployeeNotificationCount > 99 ? '99+' : unreadEmployeeNotificationCount}
+            </span>
+          )}
+        </button>
+
+        {employeeNotificationOpen && (
+          <div className="notification-panel">
+            <div className="notification-head">
+              <div className="notification-head-title">
+                <span className="notification-head-icon">🔔</span>
+                <div>
+                  <strong>Bildirimler</strong>
+                  <div className="muted" style={{ fontSize: '11px', marginTop: '3px' }}>
+                    {unreadEmployeeNotificationCount > 0
+                      ? `${unreadEmployeeNotificationCount} okunmamış bildirim`
+                      : 'Yeni bildirimin yok'}
+                  </div>
+                </div>
+              </div>
+
+              {unreadEmployeeNotificationCount > 0 && (
+                <button
+                  className="secondary"
+                  type="button"
+                  onClick={markAllEmployeeNotificationsRead}
+                  style={{ padding: '7px 10px', fontSize: '11px' }}
+                >
+                  Tümünü okundu yap
+                </button>
+              )}
+            </div>
+
+            <div className="notification-list">
+              {!employeeNotifications.length ? (
+                <div className="notification-empty">
+                  <div className="notification-empty-icon">🔕</div>
+                  <strong>Henüz bildirim yok</strong>
+                  <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                    Yönetici bir iş talebini kabul veya reddettiğinde burada görünecek.
+                  </div>
+                </div>
+              ) : (
+                employeeNotifications.map((item) => {
+                  const unread = !readEmployeeNotificationIds.includes(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`notification-item ${unread ? 'unread' : ''}`}
+                      onClick={() => markEmployeeNotificationRead(item.id)}
+                    >
+                      <span className={`notification-dot ${unread ? '' : 'read'}`} />
+                      <span className="notification-content">
+                        <strong>{item.title}</strong>
+                        <span>{item.message}</span>
+                        <small className="notification-time">
+                          {item.createdAt?.slice(0, 16).replace('T', ' ') || ''}
+                        </small>
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="content dashboard-content">
         {notificationMessage && (
@@ -1686,7 +1866,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
       supabase
         .from('shifts')
         .select(
-          'id,date,start_time,end_time,status,profiles(id,full_name,employee_number),locations(name)'
+          'id,date,start_time,end_time,status,location_id,profiles(id,full_name,employee_number),locations(name)'
         )
         .order('date', { ascending: false })
         .order('start_time'),
@@ -1890,6 +2070,8 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
 
 
   async function updateStatus(id, status) {
+    const shift = shifts.find((item) => item.id === id);
+
     const { error } = await supabase
       .from('shifts')
       .update({ status })
@@ -1897,9 +2079,44 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
 
     if (error) {
       alert(error.message);
-    } else {
-      await load();
+      return;
     }
+
+    // Bir yönetici kabul edilmiş bir vardiyayı iptal/reddederse,
+    // çalışanın orijinal shift_request kaydını da rejected yap.
+    // Böylece çalışan tarafındaki bildirim sistemi bunu algılar.
+    if (status === 'rejected' && shift?.profiles?.id) {
+      const { data: matchingRequests, error: requestLookupError } = await supabase
+        .from('shift_requests')
+        .select('id,status,responded_at,created_at')
+        .eq('employee_id', shift.profiles.id)
+        .eq('admin_id', profile.id)
+        .eq('date', shift.date)
+        .eq('start_time', shift.start_time)
+        .eq('end_time', shift.end_time)
+        .eq('location_id', shift.location_id)
+        .in('status', ['accepted', 'pending'])
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (requestLookupError) {
+        console.error('İptal edilen vardiyanın talebi bulunamadı:', requestLookupError);
+      } else if (matchingRequests?.[0]) {
+        const { error: requestUpdateError } = await supabase
+          .from('shift_requests')
+          .update({
+            status: 'rejected',
+            responded_at: new Date().toISOString(),
+          })
+          .eq('id', matchingRequests[0].id);
+
+        if (requestUpdateError) {
+          console.error('Çalışana iptal bildirimi gönderilemedi:', requestUpdateError);
+        }
+      }
+    }
+
+    await load();
   }
 
   async function remove(id) {
