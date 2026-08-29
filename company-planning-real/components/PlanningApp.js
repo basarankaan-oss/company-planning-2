@@ -58,6 +58,10 @@ const translations = {
     upcoming: 'YAKLAŞAN VARDİYALAR', planned: 'Planlanan çalışmalar',
     noUpcoming: 'Yaklaşan vardiya bulunmuyor.', emailLabel: 'E-posta', phoneLabel: 'Telefon',
     thisMonth: 'Bu ay',
+    shiftConflict: 'Vardiya çakışması',
+    shiftConflictDesc: 'Bu çalışanın seçilen saatlerde zaten başka bir vardiyası bulunuyor.',
+    existingShift: 'Mevcut vardiya',
+    cannotSendConflict: 'Çalışma talebi gönderilemedi çünkü vardiya çakışıyor.',
   },
   nl: {
     loading: 'Laden...', profileLoading: 'Profiel laden...', login: 'INLOGGEN', signup: 'NIEUW ACCOUNT',
@@ -94,6 +98,10 @@ const translations = {
     employeeDetail: 'MEDEWERKERDETAIL', noEmp: 'Geen personeelsnummer', close: 'Sluiten',
     upcoming: 'KOMENDE DIENSTEN', planned: 'Geplande diensten', noUpcoming: 'Geen komende diensten.',
     emailLabel: 'E-mail', phoneLabel: 'Telefoon', thisMonth: 'Deze maand',
+    shiftConflict: 'Dienstconflict',
+    shiftConflictDesc: 'Deze medewerker heeft op de gekozen tijden al een andere dienst.',
+    existingShift: 'Bestaande dienst',
+    cannotSendConflict: 'Het werkverzoek kan niet worden verstuurd omdat de diensten overlappen.',
   },
   en: {
     loading: 'Loading...', profileLoading: 'Loading profile...', login: 'LOGIN', signup: 'NEW ACCOUNT',
@@ -127,6 +135,10 @@ const translations = {
     employeeDetail: 'EMPLOYEE DETAILS', noEmp: 'No employee number', close: 'Close',
     upcoming: 'UPCOMING SHIFTS', planned: 'Scheduled work', noUpcoming: 'No upcoming shifts.',
     emailLabel: 'Email', phoneLabel: 'Phone', thisMonth: 'This month',
+    shiftConflict: 'Shift conflict',
+    shiftConflictDesc: 'This employee already has another shift during the selected time.',
+    existingShift: 'Existing shift',
+    cannotSendConflict: 'The work request cannot be sent because the shifts overlap.',
   },
 };
 
@@ -939,6 +951,39 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
     }
   }
 
+  function findShiftConflict(employeeId, shiftDate, startTime, endTime) {
+    const toMinutes = (value) => {
+      const [hours, minutes] = String(value || '00:00')
+        .slice(0, 5)
+        .split(':')
+        .map(Number);
+
+      return hours * 60 + minutes;
+    };
+
+    const newStart = toMinutes(startTime);
+    let newEnd = toMinutes(endTime);
+
+    if (newEnd <= newStart) {
+      newEnd += 24 * 60;
+    }
+
+    return shifts.find((shift) => {
+      if (shift.profiles?.id !== employeeId) return false;
+      if (shift.date !== shiftDate) return false;
+      if (shift.status === 'rejected') return false;
+
+      const existingStart = toMinutes(shift.start_time);
+      let existingEnd = toMinutes(shift.end_time);
+
+      if (existingEnd <= existingStart) {
+        existingEnd += 24 * 60;
+      }
+
+      return existingStart < newEnd && existingEnd > newStart;
+    });
+  }
+
   async function sendShiftRequest(e) {
     e.preventDefault();
 
@@ -959,7 +1004,32 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
 
     if (requestEnd <= requestStart) {
       setRequestMessage(
-        'Bitiş saati başlangıç saatinden sonra olmalıdır.'
+        t.endAfterStart
+      );
+      return;
+    }
+
+    const conflict = findShiftConflict(
+      requestEmployee,
+      requestDate,
+      requestStart,
+      requestEnd
+    );
+
+    if (conflict) {
+      const employee = employees.find(
+        (item) => item.id === requestEmployee
+      );
+
+      const employeeName = employee?.full_name || t.employee;
+      const conflictLocation = conflict.locations?.name || t.place;
+      const conflictStart = conflict.start_time.slice(0, 5);
+      const conflictEnd = conflict.end_time.slice(0, 5);
+
+      setRequestMessage(
+        `⚠️ ${t.shiftConflict}: ${employeeName} — ` +
+        `${t.existingShift}: ${conflictStart}–${conflictEnd} · ` +
+        `${conflictLocation}. ${t.cannotSendConflict}`
       );
       return;
     }
@@ -1347,7 +1417,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
             onSubmit={sendShiftRequest}
           >
             <label>
-              Çalışan
+              {t.employee}
 
               <select
                 value={requestEmployee}
@@ -1357,7 +1427,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
                 required
               >
                 <option value="">
-                  {t.employee} seçin
+                  {t.chooseEmployee}
                 </option>
 
                 {employees.map((employee) => (
@@ -1375,7 +1445,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
             </label>
 
             <label>
-              Tarih
+              {t.date}
 
               <input
                 type="date"
@@ -1389,7 +1459,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
 
             <div className="two">
               <label>
-                Başlangıç
+                {t.start}
 
                 <input
                   type="time"
@@ -1441,7 +1511,7 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
             </label>
 
             <label>
-              Not
+              {t.note}
 
               <span
                 style={{
