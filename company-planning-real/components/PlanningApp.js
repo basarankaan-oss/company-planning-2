@@ -393,6 +393,29 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
     .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     table { min-width: 680px; }
     .company-brand { user-select: none; }
+    .brand-context {
+      margin-top: 6px;
+      color: #7b818a;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .brand-context-large {
+      margin-top: 8px;
+      color: #7b818a;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .company-identity-card {
+      padding: 18px 18px 16px;
+      margin-bottom: 22px;
+      border: 1px solid #e7e9ed;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fff, #fafbfc);
+    }
     .topbar { min-height: 72px; padding: 14px 24px; gap: 20px; }
     .topbar .user { display: flex; align-items: center; gap: 14px; }
     .topbar .user > span { min-width: 0; }
@@ -1056,6 +1079,7 @@ function AuthScreen({ language, setLanguage }) {
       <div className="auth-card">
         <div style={{ marginBottom: '30px' }}>
           <CompanyBrand language={language} />
+          <div className="brand-context-large">Planning</div>
         </div>
 
         <p className="eyebrow">
@@ -1144,7 +1168,10 @@ function AuthScreen({ language, setLanguage }) {
           {mode === 'login' ? t.signupPrompt : t.loginPrompt}
         </button>
       </div>
-    </main>
+            <div className="muted" style={{ textAlign: 'center', marginTop: '22px', fontSize: '10px', letterSpacing: '.08em' }}>
+          SUPRA &amp; INFRA · INTERNAL PLANNING SYSTEM
+        </div>
+</main>
   );
 }
 
@@ -2661,11 +2688,13 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
         <div className="admin-head dashboard-hero">
           <div>
             <p className="eyebrow">
-              YÖNETİCİ PANELİ
+              SUPRA &amp; INFRA · MANAGEMENT
             </p>
 
             <div style={{ marginBottom: '18px' }}>
               <CompanyBrand compact language={language} />
+              <div className="brand-context">My Schedule</div>
+              <div className="brand-context">Management Dashboard</div>
             </div>
             <h1>{t.planning}</h1>
 
