@@ -384,6 +384,132 @@ function CompanyBrand({ compact = false, language = 'tr' }) {
     .topbar .user strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
     .auth-page { padding: 28px 20px; }
     .auth-card { width: min(100%, 460px); }
+
+    .notification-wrap {
+      position: relative;
+    }
+    .notification-button {
+      position: relative;
+      min-width: 44px;
+      width: 44px;
+      height: 44px;
+      padding: 0 !important;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+    }
+    .notification-count {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      min-width: 19px;
+      height: 19px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: #d92d20;
+      color: #fff;
+      border: 2px solid #fff;
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .notification-panel {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      width: min(390px, calc(100vw - 28px));
+      max-height: min(560px, calc(100vh - 110px));
+      overflow: hidden;
+      z-index: 1100;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 18px 50px rgba(21,35,59,.16);
+    }
+    .notification-head {
+      padding: 15px 16px;
+      border-bottom: 1px solid #eef0f3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .notification-list {
+      max-height: 470px;
+      overflow-y: auto;
+    }
+    .notification-item {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid #f0f1f3;
+      border-radius: 0;
+      background: #fff;
+      text-align: left;
+      padding: 14px 16px;
+      cursor: pointer;
+      display: flex;
+      gap: 11px;
+      align-items: flex-start;
+    }
+    .notification-item:hover {
+      background: #f8fafc;
+    }
+    .notification-item.unread {
+      background: #fff8f5;
+    }
+    .notification-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #d92d20;
+      margin-top: 6px;
+      flex: 0 0 auto;
+    }
+    .notification-dot.read {
+      background: #cfd4dc;
+    }
+    .notification-content {
+      min-width: 0;
+      flex: 1;
+    }
+    .notification-content strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .notification-content span {
+      display: block;
+      margin-top: 4px;
+      color: #667085;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .notification-time {
+      display: block;
+      margin-top: 6px;
+      color: #98a2b3;
+      font-size: 11px;
+    }
+    .notification-empty {
+      padding: 32px 20px;
+      text-align: center;
+      color: #7b818a;
+    }
+    @media (max-width: 760px) {
+      .notification-panel {
+        position: fixed;
+        right: 14px;
+        top: 72px;
+        width: min(390px, calc(100vw - 28px));
+      }
+      .notification-list {
+        max-height: calc(100vh - 180px);
+      }
+    }
     .planning-calendar {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
@@ -1158,6 +1284,14 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
   const [requestBusy, setRequestBusy] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
   const [adminNotification, setAdminNotification] = useState('');
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('supra_read_notifications') || '[]');
+    } catch {
+      return [];
+    }
+  });
   const [dashboardPeriod, setDashboardPeriod] = useState('month');
   const t = translations[language] || translations.tr;
 
@@ -2477,7 +2611,72 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
                   <strong>
                     {shifts
                       .filter((shift) => {
-                        return (
+                      
+  const notificationItems = useMemo(() => {
+    const items = [];
+
+    // Existing admin notification message.
+    if (adminNotification) {
+      items.push({
+        id: 'admin-message',
+        type: 'info',
+        title: 'Bildirim',
+        message: adminNotification,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // Build notifications from recent shift/request records when available.
+    shifts
+      .slice()
+      .sort((a, b) => {
+        const first = `${a.date || ''} ${a.start_time || ''}`;
+        const second = `${b.date || ''} ${b.start_time || ''}`;
+        return second.localeCompare(first);
+      })
+      .slice(0, 12)
+      .forEach((shift) => {
+        const status = shift.status;
+        const name = shift.profiles?.full_name || 'Çalışan';
+        const place = shift.locations?.name || '-';
+        const time = `${shift.start_time?.slice(0, 5) || '--:--'} – ${shift.end_time?.slice(0, 5) || '--:--'}`;
+
+        items.push({
+          id: `shift-${shift.id}`,
+          type: status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'info',
+          title:
+            status === 'approved'
+              ? 'Vardiya onaylandı'
+              : status === 'rejected'
+                ? 'Vardiya reddedildi'
+                : 'Yeni vardiya',
+          message: `${name} • ${shift.date || '-'} • ${time} • ${place}`,
+          createdAt: `${shift.date || '0000-00-00'}T${shift.start_time || '00:00'}`,
+        });
+      });
+
+    return items.slice(0, 15);
+  }, [adminNotification, shifts]);
+
+  const unreadNotificationCount = notificationItems.filter(
+    (item) => !readNotificationIds.includes(item.id)
+  ).length;
+
+  const markNotificationRead = (id) => {
+    setReadNotificationIds((current) => {
+      const next = current.includes(id) ? current : [...current, id];
+      localStorage.setItem('supra_read_notifications', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const markAllNotificationsRead = () => {
+    const next = notificationItems.map((item) => item.id);
+    setReadNotificationIds(next);
+    localStorage.setItem('supra_read_notifications', JSON.stringify(next));
+  };
+
+  return (
                           shift.profiles?.id ===
                             selectedEmployee.id &&
                           shift.status === 'approved' &&
