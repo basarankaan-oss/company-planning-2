@@ -148,7 +148,14 @@ const translateDayNames = (lang) => {
 
 function LanguageSelector({ language, onChange }) {
   return (
-    <div style={{ position: 'absolute', top: '18px', right: '18px', zIndex: 20 }}>
+    <div
+      style={{
+        position: 'fixed',
+        left: '20px',
+        bottom: '20px',
+        zIndex: 1200,
+      }}
+    >
       <select
         value={language}
         onChange={(e) => onChange(e.target.value)}
@@ -160,10 +167,13 @@ function LanguageSelector({ language, onChange }) {
           background: '#fff',
           fontWeight: 600,
           cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
         }}
       >
         {Object.entries(LANGUAGES).map(([code, item]) => (
-          <option key={code} value={code}>{item.flag} {item.label}</option>
+          <option key={code} value={code}>
+            {item.flag} {item.label}
+          </option>
         ))}
       </select>
     </div>
