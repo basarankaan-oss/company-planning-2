@@ -40,7 +40,7 @@ const translations = {
     employeesDesc: 'Şirket çalışanlarını, iletişim bilgilerini ve toplam çalışma saatlerini görüntüle.',
     searchEmployee: 'İsim, personel no, e-posta veya telefon ara...',
     noEmployee: 'Aramanıza uygun çalışan bulunamadı.',
-    employeeNo: 'Personel No', totalHour: 'Toplam Saat',
+    employeeNo: 'Personel No', totalHour: 'Toplam Saat', topEmployees: 'En Çok Çalışan 5 Personel', rank: 'Sıra',
     newRequest: 'YENİ TALEP', sendRequest: 'Çalışma Talebi Gönder',
     sendRequestDesc: 'Bir çalışana belirli tarih, saat ve şehir için çalışma talebi gönder.',
     chooseEmployee: 'Çalışan seçin', date: 'Tarih', start: 'Başlangıç', end: 'Bitiş',
@@ -88,7 +88,7 @@ const translations = {
     employeesDesc: 'Bekijk medewerkers, contactgegevens en totale gewerkte uren.',
     searchEmployee: 'Zoek op naam, personeelsnummer, e-mail of telefoon...',
     noEmployee: 'Geen medewerker gevonden voor deze zoekopdracht.', employeeNo: 'Personeelsnr.',
-    totalHour: 'Totaal uren', newRequest: 'NIEUW VERZOEK', sendRequest: 'Werkverzoek versturen',
+    totalHour: 'Totaal uren', topEmployees: 'Top 5 medewerkers met de meeste uren', rank: 'Rang', newRequest: 'NIEUW VERZOEK', sendRequest: 'Werkverzoek versturen',
     sendRequestDesc: 'Stuur een medewerker een werkverzoek voor een datum, tijd en stad.',
     chooseEmployee: 'Kies medewerker', date: 'Datum', start: 'Start', end: 'Einde',
     city: 'Stad', chooseCity: 'Kies stad', note: 'Notitie', optional: 'Optioneel',
@@ -130,7 +130,7 @@ const translations = {
     totalPlans: 'Total plans', employees: 'Employees', totalHours: 'Total hours', personnel: 'PERSONNEL',
     employeesTitle: 'Employees', employeesDesc: 'View employees, contact details and total working hours.',
     searchEmployee: 'Search name, employee no., email or phone...', noEmployee: 'No employee found.',
-    employeeNo: 'Employee No.', totalHour: 'Total Hours', newRequest: 'NEW REQUEST',
+    employeeNo: 'Employee No.', totalHour: 'Total Hours', topEmployees: 'Top 5 Employees by Hours Worked', rank: 'Rank', newRequest: 'NEW REQUEST',
     sendRequest: 'Send Work Request', sendRequestDesc: 'Send an employee a work request for a specific date, time and city.',
     chooseEmployee: 'Choose employee', date: 'Date', start: 'Start', end: 'End', city: 'City',
     chooseCity: 'Choose city', note: 'Note', optional: 'Optional', sendRequestBtn: 'SEND WORK REQUEST →',
@@ -1255,6 +1255,17 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
       );
   }
 
+  const topEmployees = useMemo(() => {
+    return employees
+      .map((employee) => ({
+        ...employee,
+        totalHours: employeeTotalHours(employee.id),
+      }))
+      .filter((employee) => employee.totalHours > 0)
+      .sort((a, b) => b.totalHours - a.totalHours)
+      .slice(0, 5);
+  }, [employees, shifts]);
+
   const weekDays = useMemo(
     () => getWeekDays(weekStart),
     [weekStart]
@@ -1439,6 +1450,77 @@ function AdminPanel({ profile, onLogout, language, setLanguage }) {
             <strong>{total.toFixed(1)}</strong>
           </div>
         </div>
+
+        {/* EN ÇOK ÇALIŞAN 5 PERSONEL */}
+        <section
+          className="card"
+          style={{ marginBottom: '18px' }}
+        >
+          <div style={{ marginBottom: '20px' }}>
+            <p className="eyebrow">
+              {t.personnel}
+            </p>
+
+            <h2 style={{ marginBottom: '8px' }}>
+              {t.topEmployees}
+            </h2>
+          </div>
+
+          {!topEmployees.length ? (
+            <div className="empty">
+              {t.noEmployee}
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t.rank}</th>
+                    <th>{t.employee}</th>
+                    <th>{t.employeeNo}</th>
+                    <th>{t.totalHour}</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {topEmployees.map((employee, index) => (
+                    <tr key={employee.id}>
+                      <td>
+                        <strong>
+                          {index === 0
+                            ? '🥇'
+                            : index === 1
+                              ? '🥈'
+                              : index === 2
+                                ? '🥉'
+                                : index + 1}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <strong>
+                          {employee.full_name || '-'}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <span className="badge">
+                          {employee.employee_number || '-'}
+                        </span>
+                      </td>
+
+                      <td>
+                        <strong>
+                          {employee.totalHours.toFixed(1)} {t.hour}
+                        </strong>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         {/* ÇALIŞANLAR */}
         <section
